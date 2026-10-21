@@ -6,6 +6,9 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # "Run workflow" button in the Actions tab — re-run CI by hand on any branch,
+  # e.g. when GitHub drops a push/PR event during an incident.
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref (e.g. rapid pushes to a PR branch).
 concurrency:
