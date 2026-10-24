@@ -12,8 +12,12 @@ feedback are all welcome. This guide gets you from zero to a merged pull request
 - **Pick something to work on.** Issues labeled
   [`good first issue`](https://github.com/kalamiohq/kalamio/labels/good%20first%20issue) are
   a great start. Comment on the issue to say you're taking it, so two people don't build the same thing.
-- **Discuss big changes first.** For a new feature or a large refactor, open an issue
-  before writing code, so we can agree on the approach.
+- **Discuss big changes first, and wait for the `accepted` label.** For a new feature or a
+  large refactor, open an issue before writing code, so we can agree on the approach. Once we
+  agree it fits Kalamio and how it should be built, a maintainer adds the
+  [`accepted`](https://github.com/kalamiohq/kalamio/labels/accepted) label — that's your go-ahead.
+  Ticking "I'd like to work on this myself" on the issue isn't, on its own. Pull requests for
+  features without an accepted issue may be closed. Bug fixes, docs, and tests don't need the label.
 - **Found a security problem?** Don't open a public issue — follow [SECURITY.md](SECURITY.md).
 
 ## Local setup

@@ -24,8 +24,12 @@ body:
     id: contribute
     attributes:
       label: Contributing
+      description: >-
+        A maintainer adds the `accepted` label once we agree the idea fits Kalamio and how it
+        should be built. Please wait for it before writing code — pull requests for features
+        without an accepted issue may be closed.
       options:
-        - label: I'd like to work on this myself.
+        - label: I'd like to work on this myself, once the issue is accepted.
   - type: checkboxes
     id: checks
     attributes:
