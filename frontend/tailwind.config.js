@@ -24,6 +24,8 @@ export default {
             twitter:     'rgb(var(--c-twitter) / <alpha-value>)',
             brand:       'rgb(var(--c-brand) / <alpha-value>)',
             kalamio:     'rgb(var(--c-kalamio) / <alpha-value>)',
+            'kalamio-text': 'rgb(var(--c-kalamio-text) / <alpha-value>)',
+            'on-kalamio':   'rgb(var(--c-on-kalamio) / <alpha-value>)',
             accent:      'rgb(var(--c-accent) / <alpha-value>)',
             success:     'rgb(var(--c-success) / <alpha-value>)',
             warning:     'rgb(var(--c-warning) / <alpha-value>)',

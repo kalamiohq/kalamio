@@ -56,9 +56,13 @@
     --c-border:       55  55  53;
 
     /* Kalamio Orange (#FD5002) — the brand colour, identical in both themes.
-       Used for the logo, primary actions and the accent below; never for body
-       text, where it is too light on the light ground (3.2:1). */
-    --c-kalamio:     253  80   2;
+       Used for the logo, primary actions and the accent below. White on it is
+       only 3.3:1, so labels on orange use ink (--c-on-kalamio, 5.6:1), and
+       small orange text uses --c-kalamio-text, tuned per theme to clear 4.5:1
+       on a 10% orange tint. */
+    --c-kalamio:      253  80   2;
+    --c-on-kalamio:    18  18  17;
+    --c-kalamio-text: 253  89  15;
 
     /* Marks active/selected/focused things across the app (saved bookmark,
        selected option, focus rings, collection inputs). One knob, so every
@@ -109,8 +113,9 @@
     --c-border:      225 225 222;
 
     /* --c-kalamio and --c-brand-accent are not re-declared: the brand orange
-       reads on both grounds. Only the success hue goes deeper, so white button
-       labels stay legible on the light ground. */
+       reads on both grounds. Orange text goes deeper, as does the success hue,
+       so badge text and white button labels stay legible on the light ground. */
+    --c-kalamio-text: 195  62   2;
     --c-green:        21 128  61;
 
     --shadow-xs:   0 1px 2px rgb(0 0 0 / 0.05);
@@ -271,12 +276,11 @@
         @apply btn-dark bg-grey text-black;
     }
 
-    /* Primary action (Write, Publish). Kalamio Orange in both themes, so the label is a fixed
-       white rather than text-white, which is the dark-theme background colour. */
+    /* Primary action (Write, Publish). Kalamio Orange in both themes with a fixed ink label:
+       white on this orange fails WCAG AA, and text-black flips to near-white in the dark theme. */
     .btn-brand {
-        @apply whitespace-nowrap bg-kalamio rounded-full py-3 px-6 text-xl capitalize
-               font-semibold active:scale-[0.97];
-        color: #fff;
+        @apply whitespace-nowrap bg-kalamio text-on-kalamio rounded-full py-3 px-6 text-xl
+               capitalize font-semibold active:scale-[0.97];
         transition: opacity 0.2s ease, transform 0.2s ease;
     }
     .btn-brand:hover {
@@ -292,7 +296,7 @@
     }
 
     .beta-badge {
-        @apply bg-kalamio/10 text-kalamio text-[10px] font-bold px-1.5 py-0.5 rounded-full
+        @apply bg-kalamio/10 text-kalamio-text text-[10px] font-bold px-1.5 py-0.5 rounded-full
                border border-kalamio/20 leading-none;
     }
 
@@ -9286,7 +9290,7 @@
 }
 .landing__beta {
     background: rgb(var(--c-kalamio) / 0.1);
-    color: rgb(var(--c-kalamio));
+    color: rgb(var(--c-kalamio-text));
     font-size: 10px;
     font-weight: 700;
     padding: 2px 6px;
