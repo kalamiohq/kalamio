@@ -1,7 +1,7 @@
 <div align="center">
 
 <a href="https://kalamio.com">
-  <img src="frontend/src/imgs/logo.png" alt="Kalamio logo" width="88" height="88">
+  <img src="brand/icon/app-icon.svg" alt="Kalamio logo" width="88" height="88">
 </a>
 
 <h1>Kalamio</h1>

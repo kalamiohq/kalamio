@@ -23,6 +23,7 @@ export default {
             red:         'rgb(var(--c-red) / <alpha-value>)',
             twitter:     'rgb(var(--c-twitter) / <alpha-value>)',
             brand:       'rgb(var(--c-brand) / <alpha-value>)',
+            kalamio:     'rgb(var(--c-kalamio) / <alpha-value>)',
             accent:      'rgb(var(--c-accent) / <alpha-value>)',
             success:     'rgb(var(--c-success) / <alpha-value>)',
             warning:     'rgb(var(--c-warning) / <alpha-value>)',

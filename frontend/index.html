@@ -2,7 +2,9 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,11 +20,14 @@
     <meta property="og:title" content="Kalamio — publishing for every voice" />
     <meta property="og:description" content="Kalamio is the publishing platform for every voice on earth. Write your ideas, publish your story, reach readers who care." />
     <meta property="og:url" content="https://kalamio.com" />
-    <meta property="og:image" content="https://kalamio.com/splash-logo.png" />
+    <meta property="og:image" content="https://kalamio.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Kalamio — Write to the world." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Kalamio — publishing for every voice" />
     <meta name="twitter:description" content="Kalamio is the publishing platform for every voice on earth. Write your ideas, publish your story, reach readers who care." />
-    <meta name="twitter:image" content="https://kalamio.com/splash-logo.png" />
+    <meta name="twitter:image" content="https://kalamio.com/og-image.png" />
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
         script-src 'self' 'unsafe-inline' https://platform.twitter.com https://www.instagram.com https://www.tiktok.com;
@@ -54,8 +59,8 @@
         pointer-events: none;
       }
       #splash-logo {
-        width: 96px;
-        height: 96px;
+        width: 72px;
+        height: 72px;
         object-fit: contain;
         animation: splash-pulse 1.8s ease-in-out infinite;
       }
@@ -85,7 +90,7 @@
   <body>
     <!-- Splash — outside #root so React doesn't auto-remove it -->
     <div id="splash" aria-hidden="true">
-      <img src="/splash-logo.png" alt="" width="96" height="96" id="splash-logo" />
+      <img src="/logo.svg" alt="" width="72" height="72" id="splash-logo" />
     </div>
     <div id="root" role="application" aria-label="Kalamio"></div>
     <script type="module" src="/src/main.jsx"></script>

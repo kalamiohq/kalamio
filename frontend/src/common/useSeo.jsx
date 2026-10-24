@@ -27,7 +27,8 @@ export const SITE_NAME = "Kalamio";
 export const PRODUCTION_ORIGIN = "https://kalamio.com";
 export const DEFAULT_DESCRIPTION =
   "Kalamio is the publishing platform for every voice on earth. Write your ideas, publish your story, reach readers who care.";
-export const DEFAULT_IMAGE = `${PRODUCTION_ORIGIN}/splash-logo.png`;
+export const DEFAULT_IMAGE = `${PRODUCTION_ORIGIN}/og-image.png`;
+export const LOGO_IMAGE = `${PRODUCTION_ORIGIN}/logo-512.png`;
 
 const JSONLD_ID = "seo-jsonld";
 
@@ -158,7 +159,7 @@ export const buildArticleJsonLd = ({
   publisher: {
     "@type": "Organization",
     name: SITE_NAME,
-    logo: { "@type": "ImageObject", url: DEFAULT_IMAGE },
+    logo: { "@type": "ImageObject", url: LOGO_IMAGE },
   },
 });
 

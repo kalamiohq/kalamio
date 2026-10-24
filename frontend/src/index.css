@@ -55,11 +55,15 @@
     --c-surface:      36  36  35;
     --c-border:       55  55  53;
 
+    /* Kalamio Orange (#FD5002) — the brand colour, identical in both themes.
+       Used for the logo, primary actions and the accent below; never for body
+       text, where it is too light on the light ground (3.2:1). */
+    --c-kalamio:     253  80   2;
+
     /* Marks active/selected/focused things across the app (saved bookmark,
-       selected option, focus rings, collection inputs). Aliased to --c-brand
-       so the app and the editor share ONE accent and can never drift apart —
-       monochrome today, and a single knob if a brand colour is ever wanted. */
-    --c-brand-accent: var(--c-brand);
+       selected option, focus rings, collection inputs). One knob, so every
+       accent follows the brand colour and they can never drift apart. */
+    --c-brand-accent: var(--c-kalamio);
 
     /* Status hues only — deliberately NOT accents. Kept coloured because
        success/warning/danger must stay distinguishable even in a
@@ -104,8 +108,8 @@
     --c-surface:     247 247 245;
     --c-border:      225 225 222;
 
-    /* --c-brand-accent is not re-declared: it follows --c-brand, which this
-       block already flips. Only the success hue goes deeper, so white button
+    /* --c-kalamio and --c-brand-accent are not re-declared: the brand orange
+       reads on both grounds. Only the success hue goes deeper, so white button
        labels stay legible on the light ground. */
     --c-green:        21 128  61;
 
@@ -267,13 +271,29 @@
         @apply btn-dark bg-grey text-black;
     }
 
+    /* Primary action (Write, Publish). Kalamio Orange in both themes, so the label is a fixed
+       white rather than text-white, which is the dark-theme background colour. */
     .btn-brand {
-        @apply whitespace-nowrap bg-black text-white rounded-full py-3 px-6 text-xl capitalize
+        @apply whitespace-nowrap bg-kalamio rounded-full py-3 px-6 text-xl capitalize
                font-semibold active:scale-[0.97];
+        color: #fff;
         transition: opacity 0.2s ease, transform 0.2s ease;
     }
     .btn-brand:hover {
         opacity: 0.8;
+    }
+
+    /* ── Brand ───────────────────────────────────── */
+    /* <Logo /> is an inline SVG: size it with a height, the width follows its viewBox. */
+    .kalamio-logo {
+        display: block;
+        flex: none;
+        width: auto;
+    }
+
+    .beta-badge {
+        @apply bg-kalamio/10 text-kalamio text-[10px] font-bold px-1.5 py-0.5 rounded-full
+               border border-kalamio/20 leading-none;
     }
 
     /* ── Inputs ──────────────────────────────────── */
@@ -556,17 +576,9 @@
         text-decoration: none;
     }
 
-    .left-sidebar__logo img {
-        width: 34px;
-        height: auto;
-    }
-
-    .left-sidebar__logo-text {
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 700;
-        font-size: 22px;
+    .left-sidebar__logo .kalamio-logo {
+        height: 26px;
         color: rgb(var(--c-black));
-        letter-spacing: -0.3px;
     }
 
     .left-sidebar__nav {
@@ -803,18 +815,9 @@
         text-decoration: none;
     }
 
-    .mobile-top-bar__brand-icon {
-        width: 32px;
-        height: 32px;
-        object-fit: contain;
-    }
-
-    .mobile-top-bar__brand-name {
-        font-family: 'DM Sans', sans-serif;
-        font-size: 22px;
-        font-weight: 700;
+    .mobile-top-bar__brand .kalamio-logo {
+        height: 24px;
         color: rgb(var(--c-black));
-        letter-spacing: -0.3px;
     }
 
     .mobile-top-bar__actions {
@@ -9277,29 +9280,20 @@
     align-items: center;
     text-decoration: none;
 }
-.landing__logo img {
-    width: clamp(26px, 4.8vmin, 34px);
-    height: auto;
-    display: block;
-    object-fit: contain;
-}
-.landing__logo-text {
-    font-family: 'DM Sans', sans-serif;
-    font-weight: 700;
-    font-size: clamp(17px, 3vmin, 22px);
+.landing__logo .kalamio-logo {
+    height: clamp(20px, 3.6vmin, 26px);
     color: rgb(var(--c-black));
-    letter-spacing: -0.3px;
 }
 .landing__beta {
-    background: rgb(255 107 0 / 0.1);
-    color: #FF6B00;
+    background: rgb(var(--c-kalamio) / 0.1);
+    color: rgb(var(--c-kalamio));
     font-size: 10px;
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 999px;
     margin-left: 8px;
     margin-top: 4px;
-    border: 1px solid rgb(255 107 0 / 0.2);
+    border: 1px solid rgb(var(--c-kalamio) / 0.2);
     line-height: 1;
 }
 .landing__header-actions {

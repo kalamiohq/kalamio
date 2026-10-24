@@ -17,7 +17,8 @@ const SITE_NAME = 'Kalamio';
 export const ORIGIN = (process.env.FRONTEND_URL || 'https://kalamio.com').replace(/\/+$/, '');
 const DEFAULT_DESCRIPTION =
   'Kalamio is the publishing platform for every voice on earth. Write your ideas, publish your story, reach readers who care.';
-const DEFAULT_IMAGE = `${ORIGIN}/splash-logo.png`;
+const DEFAULT_IMAGE = `${ORIGIN}/og-image.png`;
+const LOGO_IMAGE = `${ORIGIN}/logo-512.png`;
 
 export const escapeHtml = (value = '') =>
   String(value)
@@ -118,7 +119,7 @@ export const blogMeta = (blog) => {
       publisher: {
         '@type': 'Organization',
         name: SITE_NAME,
-        logo: { '@type': 'ImageObject', url: DEFAULT_IMAGE },
+        logo: { '@type': 'ImageObject', url: LOGO_IMAGE },
       },
     },
   };

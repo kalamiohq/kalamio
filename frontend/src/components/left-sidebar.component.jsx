@@ -5,9 +5,8 @@ import { storeInSession, removeFromSession } from "../common/session";
 import { revokeSessionOnServer } from "../common/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../common/queryKeys";
-import lightLogo from "../imgs/logo-light.png";
-import darkLogo from "../imgs/logo-dark.png";
 import Icon from "./Icon";
+import Logo from "./Logo";
 import KeepReading from "./keep-reading.component";
 import TextPostComposer from "./text-post-composer.component";
 import Avatar from "./Avatar";
@@ -195,12 +194,8 @@ const LeftSidebar = () => {
                 <div key="normal-mode" className="left-sidebar__mode-content">
                     {/* Logo */}
                     <Link to="/" state={{ resetScroll: true }} className="left-sidebar__logo flex items-center">
-                        <img
-                            src={theme === "light" ? darkLogo : lightLogo}
-                            alt="Kalamio logo"
-                        />
-                        <span className="left-sidebar__logo-text">Kalamio</span>
-                        <span className="bg-[#FF6B00]/10 text-[#FF6B00] text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-2 border border-[#FF6B00]/20 leading-none mt-1">BETA</span>
+                        <Logo />
+                        <span className="beta-badge ml-2">BETA</span>
                     </Link>
 
                     {/* Navigation */}

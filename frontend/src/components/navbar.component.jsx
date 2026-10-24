@@ -1,8 +1,7 @@
 import { useContext, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
-import darkLogo from "../imgs/logo-dark.png";
-import lightLogo from "../imgs/logo-light.png";
 import { ThemeContext, UserContext } from "../App";
+import Logo from "./Logo";
 import UserNavigationPanel from "./user-navigation.component";
 import { storeInSession } from "../common/session";
 import Icon from "./Icon";
@@ -59,9 +58,9 @@ const Navbar = () => {
         <>
             <nav className="navbar z-50">
 
-                <Link to="/" state={{ resetScroll: true }} className="flex-none flex items-center gap-1">
-                    <img src={ theme === "light" ? darkLogo : lightLogo } className="w-10" alt="Kalamio logo"/>
-                    <span className="bg-[#FF6B00]/10 text-[#FF6B00] text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-[#FF6B00]/20 leading-none">BETA</span>
+                <Link to="/" state={{ resetScroll: true }} className="flex-none flex items-center gap-2">
+                    <Logo wordmark={false} className="h-8 w-8" />
+                    <span className="beta-badge">BETA</span>
                 </Link>
 
                 <div className={"absolute w-full left-0 top-full mt-0.5 border-b border-border py-4 px-[5vw] md:border-0 md:block md:relative md:inset-0 md:p-0 md:w-auto md:show md:bg-transparent md:backdrop-blur-none " + (searchBoxVisibility ? "show" : "hide")} style={{ background: 'rgb(var(--c-white) / 0.9)', backdropFilter: 'blur(16px)' }}>

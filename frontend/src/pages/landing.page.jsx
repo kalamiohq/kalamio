@@ -1,7 +1,7 @@
 // Landing page (/welcome) — a single-viewport, zero-scroll intro to Kalamio.
 // The hero headline keeps shuffling through topics ("Want to write about Productivity?"),
 // topic chips float around it with mouse parallax, and a cursor spotlight + marquee
-// round out the stage. Everything runs on the app's monochrome theme tokens.
+// round out the stage. Everything runs on the app's theme tokens.
 import { useCallback, useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -16,8 +16,7 @@ import { ThemeContext, UserContext } from "../App";
 import { storeInSession } from "../common/session";
 import { useSeo } from "../common/useSeo";
 import Icon from "../components/Icon";
-import lightLogo from "../imgs/logo-light.png";
-import darkLogo from "../imgs/logo-dark.png";
+import Logo from "../components/Logo";
 
 const TOPICS = [
     { label: "Productivity", icon: "schedule" },
@@ -212,8 +211,7 @@ const LandingPage = () => {
 
             <header className="landing__header">
                 <Link to="/" className="landing__logo" aria-label="Kalamio home">
-                    <img src={theme === "light" ? darkLogo : lightLogo} alt="" />
-                    <span className="landing__logo-text">Kalamio</span>
+                    <Logo title={null} />
                     <span className="landing__beta">BETA</span>
                 </Link>
                 <div className="landing__header-actions">

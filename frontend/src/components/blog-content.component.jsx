@@ -32,7 +32,7 @@ const Img = ({ url, caption }) => {
 
 const Quote = ({ quote, caption }) => {
     return (
-        <div className="bg-[#FF6B00]/10 p-3 pl-5 border-l-4 border-[#FF6B00] rounded-r-lg">
+        <div className="bg-kalamio/10 p-3 pl-5 border-l-4 border-kalamio rounded-r-lg">
             <p className="text-xl leading-10 md:text-2xl">{cleanHTML(quote)}</p>
             {
                 caption.length ? <p className="w-full text-dark-grey text-base mt-2">{cleanHTML(caption)}</p> : ""

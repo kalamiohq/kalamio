@@ -1,9 +1,8 @@
 import { useContext, useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ThemeContext, UserContext } from "../App";
-import lightLogo from "../imgs/logo-light.png";
-import darkLogo from "../imgs/logo-dark.png";
+import { UserContext } from "../App";
 import Icon from "./Icon";
+import Logo from "./Logo";
 import { useNewNotification } from "../hooks/queries";
 
 const MobileTopBar = () => {
@@ -14,7 +13,6 @@ const MobileTopBar = () => {
     // removed — e.g. someone revoking a like.
     const { data: notificationData } = useNewNotification();
     const new_notification_available = notificationData?.new_notification_available;
-    const { theme } = useContext(ThemeContext);
     const [searchOpen, setSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
@@ -110,13 +108,8 @@ const MobileTopBar = () => {
                         </button>
                     ) : (
                         <Link to="/" state={{ resetScroll: true }} className="mobile-top-bar__brand flex items-center">
-                            <img
-                                src={theme === "light" ? darkLogo : lightLogo}
-                                alt="Kalamio logo"
-                                className="mobile-top-bar__brand-icon"
-                            />
-                            <span className="mobile-top-bar__brand-name">Kalamio</span>
-                            <span className="bg-[#FF6B00]/10 text-[#FF6B00] text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1 border border-[#FF6B00]/20 leading-none">BETA</span>
+                            <Logo />
+                            <span className="beta-badge ml-2">BETA</span>
                         </Link>
                     )}
 
