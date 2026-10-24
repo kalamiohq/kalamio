@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+#
+# CodeRabbit AI review. It gives every PR a first review; a maintainer still does the
+# final one. It never approves PRs or blocks merging, and it isn't a required check.
+# Full reference: https://docs.coderabbit.ai/reference/configuration
+language: en-US
+
+reviews:
+  # "chill" keeps to real problems instead of style nitpicks, which matters for
+  # first-time contributors.
+  profile: chill
+  # Leave the author's PR description alone; the summary goes in CodeRabbit's
+  # own walkthrough comment instead.
+  high_level_summary_in_walkthrough: true
+  poem: false
+  in_progress_fortune: false
+  # Two maintainers: reviewer suggestions add nothing.
+  suggested_reviewers: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+  pre_merge_checks:
+    # The "PR title" workflow already enforces Conventional Commits.
+    title:
+      mode: 'off'
+    # The code base doesn't use JSDoc, so a docstring-coverage warning would fire on every PR.
+    docstrings:
+      mode: 'off'
+
+  path_filters:
+    - '!**/package-lock.json'
+    - '!frontend/dist/**'
+    - '!.github/assets/**'
+
+  path_instructions:
+    - path: 'server/**/*.js'
+      instructions: |
+        Express 4 + Mongoose API for a public blogging platform. Focus on:
+        - Every route that reads or changes private data runs verifyJWT
+          (middleware/auth.js), and the handler checks the signed-in user owns the
+          resource (blog, comment, collection, message …), not only that someone is signed in.
+        - Request input is validated (validators/schemas.js via middleware/validate.js)
+          before it reaches a Mongoose query; flag user-controlled objects passed straight
+          into a query filter (NoSQL operator injection such as {"$ne": …}).
+        - User-written HTML is sanitized with sanitize-html before it's stored.
+        - Passwords, OTPs, reset tokens, JWTs and session data are never logged or
+          returned in responses or error messages.
+        - Routes wrap async controllers in asyncHandler so errors reach middleware/errorHandler.js.
+        - New behaviour comes with a Vitest test (supertest for routes).
+    - path: 'frontend/src/**/*.{js,jsx}'
+      instructions: |
+        React 18 + Vite + Tailwind single-page app with a TipTap editor. Focus on:
+        - HTML rendered with dangerouslySetInnerHTML must come from sanitized content.
+        - Hooks follow the rules of hooks; effects clean up listeners, timers and requests.
+        - UI works in both light and dark themes and stays keyboard accessible
+          (labels on inputs, buttons for actions, alt text on images).
+        - New behaviour comes with a Vitest + Testing Library test.
+    - path: '.github/workflows/**'
+      instructions: |
+        This is a public repo that accepts PRs from forks. Flag workflows that check out
+        or run PR code under pull_request_target or workflow_run, permissions wider
+        than the job needs, and untrusted input (PR titles, branch names, issue bodies)
+        interpolated directly into run: scripts.

@@ -1,0 +1,50 @@
+name: CodeQL
+
+# Static analysis for security bugs (injection, XSS, unsafe redirects, auth mistakes)
+# in frontend/ and server/, and for unsafe patterns in these workflow files.
+# Findings show up on the PR and under Security → Code scanning.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  # Weekly run, so new CodeQL queries also check code that hasn't changed.
+  schedule:
+    - cron: '27 3 * * 1'
+  workflow_dispatch:
+
+# Same rule as CI: cancel superseded PR runs, never cancel runs on main.
+concurrency:
+  group: codeql-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL · ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, actions]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # build-mode none: plain JS needs no build, CodeQL reads the source directly.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}

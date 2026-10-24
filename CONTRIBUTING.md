@@ -125,12 +125,20 @@ docker-compose.yml local development services
 ## Opening a pull request
 
 1. Push your branch to your fork and open a pull request against `main`.
-2. Fill in the pull request template: what changed, why, and how you tested it.
+2. Give it a Conventional Commits title (`fix: …`, `feat(editor): …`). PRs are
+   squash-merged, so the title becomes the commit on `main`. If the PR has a
+   single commit, that commit's message has to follow the format too.
+3. Fill in the pull request template: what changed, why, and how you tested it.
    Add screenshots or a short video for UI changes.
-3. Make sure:
+4. Make sure:
    - the CLA check is green (sign via the bot's comment if it isn't),
-   - CI passes (frontend build + tests, server tests).
-4. A maintainer will review it. We may ask for changes — that's a normal part of the process.
+   - CI passes (frontend build + tests, server tests),
+   - the PR title, CodeQL and dependency review checks pass. Dependency review
+     fails if the PR adds a package with a known high-severity vulnerability or
+     a license that isn't compatible with AGPL-3.0.
+5. CodeRabbit (an AI reviewer) leaves a first review within a few minutes. You can
+   reply to it in the PR. Its comments are suggestions, not requirements.
+6. A maintainer will review it. We may ask for changes — that's a normal part of the process.
 
 ## Questions?
 

@@ -1,0 +1,85 @@
+# Dependabot version updates: a few grouped PRs per month instead of one PR per
+# package. Security updates still arrive as soon as an advisory is published; the
+# schedule, cooldown and minor/patch limit below don't apply to them.
+#
+# Major upgrades (TipTap 3, Tailwind 4, React Router 7, Node 22 images …) need code
+# changes, so they're done by hand in their own PRs rather than proposed here.
+# Docker images aren't listed for the same reason: the Dockerfiles pin only the Node
+# major (node:20-alpine), so every image update would be a major one.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: monthly
+    # Wait a week after a release before proposing it, so a hijacked or broken
+    # release has usually been caught and pulled by then.
+    cooldown:
+      default-days: 7
+    # Version updates: minor and patch only (security updates ignore this).
+    allow:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      production:
+        dependency-type: production
+      development:
+        dependency-type: development
+      # Bundle security fixes that stay within the current major. A fix that needs
+      # a major upgrade still gets its own PR, so it can't hold back the others.
+      security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  # Same rules as /frontend, kept separate so a break on one side doesn't block the other.
+  - package-ecosystem: npm
+    directory: /server
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    allow:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+    commit-message:
+      prefix: chore(deps)
+      prefix-development: chore(deps-dev)
+    groups:
+      production:
+        dependency-type: production
+      development:
+        dependency-type: development
+      security:
+        applies-to: security-updates
+        patterns:
+          - '*'
+        update-types:
+          - minor
+          - patch
+
+  # Workflow actions (checkout, setup-node, CodeQL …), majors included: for actions
+  # those are mostly Node runtime bumps.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      actions:
+        patterns:
+          - '*'

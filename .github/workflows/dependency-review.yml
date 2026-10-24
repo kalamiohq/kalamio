@@ -1,0 +1,38 @@
+name: Dependency review
+
+# Fails a PR that adds a dependency (npm package or GitHub Action), or upgrades to a
+# version, with a known high/critical vulnerability or a license we can't ship
+# under AGPL-3.0. Only the dependencies the PR changes are checked, so existing
+# alerts don't block unrelated PRs.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: dependency-review-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Dependency review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5
+        with:
+          # Vulnerabilities only fail the check for runtime dependencies (the default
+          # fail-on-scopes), matching the --omit=dev audit in the Cloud Build deploys.
+          fail-on-severity: high
+          # Licenses that can be combined with AGPL-3.0. A dependency whose license
+          # can't be detected is reported in the summary but doesn't fail the check.
+          allow-licenses: >-
+            MIT, MIT-0, ISC, 0BSD, BSD-2-Clause, BSD-3-Clause, Apache-2.0,
+            Unlicense, CC0-1.0, CC-BY-4.0, Zlib, BlueOak-1.0.0, Python-2.0,
+            MPL-2.0, LGPL-2.1-only, LGPL-2.1-or-later, LGPL-3.0-only, LGPL-3.0-or-later,
+            GPL-2.0-or-later, GPL-3.0-only, GPL-3.0-or-later, AGPL-3.0-only, AGPL-3.0-or-later
