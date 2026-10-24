@@ -13,6 +13,7 @@ The Kalamio logo, icons and link preview. SVGs are the masters; every PNG is ren
 | --- | --- | --- |
 | Kalamio Orange | `#FD5002` | The mark, primary actions, accents |
 | Ink | `#121211` | Wordmark and text on light backgrounds |
+| White | `#FFFFFF` | The K inside the orange mark |
 | Paper | `#FCFCFA` | Light backgrounds, wordmark on dark or orange |
 | Charcoal | `#1F1F1E` | Dark backgrounds |
 
@@ -32,8 +33,8 @@ The wordmark is DM Sans SemiBold at its display optical size, set lowercase with
 | `kalamio-logo-on-dark` | Orange mark, paper wordmark. Dark backgrounds | 4096 × 912 |
 | `kalamio-logo-white` | All paper. Orange backgrounds and photos | 4096 × 912 |
 | `kalamio-logo-ink` | All ink. One-colour print | 4096 × 912 |
-| `kalamio-mark` | The K-mark alone, orange | 2048 × 2048 |
-| `kalamio-mark-white`, `kalamio-mark-ink` | The mark in paper or ink | 2048 × 2048 |
+| `kalamio-mark` | The K-mark alone: orange circle, solid white K | 2048 × 2048 |
+| `kalamio-mark-white`, `kalamio-mark-ink` | One-colour mark in paper or ink, K cut out | 2048 × 2048 |
 | `kalamio-logo-panel-{orange,light,dark}.png` | Lockup centred on a brand background, for slides and press | 3840 × 2160 |
 
 ### `icon/`
@@ -41,7 +42,7 @@ The wordmark is DM Sans SemiBold at its display optical size, set lowercase with
 | File | Use | Size |
 | --- | --- | --- |
 | `app-icon` | Orange rounded square, paper mark | 1024 |
-| `app-icon-dark` | Charcoal rounded square, orange mark | 1024 |
+| `app-icon-dark` | Charcoal rounded square, orange mark with white K | 1024 |
 | `app-icon-square.png` | Full-bleed square, for stores that apply their own mask | 1024 |
 | `profile-picture` | Orange circle, for social and GitHub avatars | 1024 |
 | `profile-picture-square.png` | Square version, for networks that crop to a circle themselves | 1024 |
@@ -58,6 +59,9 @@ The wordmark is DM Sans SemiBold at its display optical size, set lowercase with
 
 ## Using the logo
 
+- **The K is white:** the mark is an orange circle with a solid white K on every background. The K is never see-through, so it never picks up a dark background.
+- **On orange:** flip to the white version: a white disc with the K cut out, so the K shows orange. The app icon, profile picture, `kalamio-logo-white` and the loading screen use this.
+- **One colour:** the all-white and all-ink versions keep the K cut out.
 - **Clear space:** keep at least half the mark's height free on every side.
 - **Minimum size:** 16 px for the mark, 80 px wide for the full logo.
 - **Containers:** inside an app icon or avatar, the mark is 62% of the container's width.

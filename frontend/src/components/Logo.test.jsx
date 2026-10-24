@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import Logo, { KALAMIO_ORANGE } from './Logo'
+import Logo, { KALAMIO_ORANGE, KALAMIO_WHITE } from './Logo'
 
 const paths = (svg) => [...svg.querySelectorAll('path')]
+
+// The mark is an orange disc with a solid white K on top, never a see-through K.
+const expectMark = (svg) => {
+  expect(svg.querySelector('circle')).toHaveAttribute('fill', KALAMIO_ORANGE)
+  expect(paths(svg)[0]).toHaveAttribute('fill', KALAMIO_WHITE)
+}
 
 describe('Logo', () => {
   it('renders the mark and wordmark, named "Kalamio"', () => {
@@ -10,11 +16,10 @@ describe('Logo', () => {
     const svg = screen.getByRole('img', { name: 'Kalamio' })
 
     expect(svg).toHaveAttribute('viewBox', '0 0 898 200')
-    const [mark, wordmark] = paths(svg)
+    expectMark(svg)
     expect(paths(svg)).toHaveLength(2)
-    expect(mark).toHaveAttribute('fill', KALAMIO_ORANGE)
     // The wordmark follows the surrounding text colour so it works in both themes.
-    expect(wordmark).toHaveAttribute('fill', 'currentColor')
+    expect(paths(svg)[1]).toHaveAttribute('fill', 'currentColor')
   })
 
   it('renders only the square mark when wordmark is off', () => {
@@ -22,8 +27,8 @@ describe('Logo', () => {
     const svg = screen.getByRole('img', { name: 'Kalamio' })
 
     expect(svg).toHaveAttribute('viewBox', '0 0 200 200')
+    expectMark(svg)
     expect(paths(svg)).toHaveLength(1)
-    expect(paths(svg)[0]).toHaveAttribute('fill', KALAMIO_ORANGE)
   })
 
   it('is hidden from assistive tech when title is null', () => {
