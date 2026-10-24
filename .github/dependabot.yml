@@ -1,6 +1,6 @@
 # Dependabot version updates: a few grouped PRs per month instead of one PR per
 # package. Security updates still arrive as soon as an advisory is published; the
-# schedule, cooldown and minor/patch limit below don't apply to them.
+# schedule, cooldown, direct-only and minor/patch limits below don't apply to them.
 #
 # Major upgrades (TipTap 3, Tailwind 4, React Router 7, Node 22 images …) need code
 # changes, so they're done by hand in their own PRs rather than proposed here.
@@ -17,9 +17,12 @@ updates:
     # release has usually been caught and pulled by then.
     cooldown:
       default-days: 7
-    # Version updates: minor and patch only (security updates ignore this).
+    # Version updates: only packages listed in package.json, minor and patch only.
+    # Without "direct", Dependabot also bumps every package underneath them (e.g. the
+    # AWS SDK's @smithy/* internals), each in its own PR. Security updates ignore
+    # both limits, so a vulnerable indirect package still gets a fix.
     allow:
-      - dependency-name: '*'
+      - dependency-type: direct
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
@@ -49,7 +52,7 @@ updates:
     cooldown:
       default-days: 7
     allow:
-      - dependency-name: '*'
+      - dependency-type: direct
         update-types:
           - version-update:semver-minor
           - version-update:semver-patch
