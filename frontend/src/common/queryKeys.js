@@ -127,4 +127,9 @@ export const queryKeys = {
     privacy:           ()           => ['settings', 'privacy'],
     account:           ()           => ['settings', 'account'],
   },
+
+  // ── AI assistant ──────────────────────────────────────────────
+  ai: {
+    settings:     ()                => ['ai', 'settings'],
+  },
 };

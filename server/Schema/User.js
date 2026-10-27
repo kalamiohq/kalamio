@@ -167,8 +167,28 @@ const userSchema = mongoose.Schema({
         who_can_message:  { type: String, enum: ['everyone', 'nobody'], default: 'everyone' },
         show_profile:     { type: String, enum: ['everyone', 'logged_in'], default: 'everyone' },
         show_read_count:  { type: Boolean, default: true }
+    },
+    // Kalamio AI assistant: the user's own provider keys, AES-256-GCM encrypted (services/ai/key-crypto.js).
+    // select:false keeps the whole block out of every default query; only ai.controller selects it, and it
+    // never returns key_ciphertext — clients see key_last4 only.
+    ai_settings: {
+        type: {
+            active_provider: { type: String, default: null },
+            providers: {
+                type: [{
+                    _id: false,
+                    provider:       { type: String, required: true },
+                    model:          { type: String, required: true },
+                    key_ciphertext: { type: String, required: true },
+                    key_last4:      { type: String, required: true },
+                    updated_at:     { type: Date, default: Date.now },
+                }],
+                default: [],
+            },
+        },
+        select: false,
     }
-}, 
+},
 { 
     timestamps: {
         createdAt: 'joinedAt'

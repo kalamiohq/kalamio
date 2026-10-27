@@ -10,3 +10,4 @@ export { useVotePoll } from './useVotePoll';
 export { useCreateCollection, useDeleteCollection, useSaveToCollection } from './useCollectionMutations';
 export { useCreateTextPost } from './useCreateTextPost';
 export { useAddArticleToPublication, useRemoveArticleFromPublication } from './usePublicationArticles';
+export { useUpdateAiProvider, useRemoveAiProvider, aiErrorMessage } from './useAiSettingsMutations';

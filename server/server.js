@@ -37,6 +37,7 @@ import collectionRoutes from './routes/collection.routes.js';
 import readRoutes from './routes/read.routes.js';
 import prerenderRoutes from './routes/prerender.routes.js';
 import sitemapRoutes from './routes/sitemap.routes.js';
+import aiRoutes from './routes/ai.routes.js';
 
 const server = express();
 const httpServer = createServer(server);
@@ -54,8 +55,12 @@ server.use(helmet({
     crossOriginEmbedderPolicy: false, // Allow embedding cross-origin resources (S3 images)
 }));
 
-// Compress all API responses (gzip/brotli)
-server.use(compression());
+// Compress API responses (gzip/brotli) — except Server-Sent Events (the AI chat stream). compression
+// buffers output until its chunk fills, which would hold back every token instead of streaming it.
+server.use(compression({
+    filter: (req, res) =>
+        !String(res.getHeader('Content-Type') || '').startsWith('text/event-stream') && compression.filter(req, res),
+}));
 
 // Structured request logging (JSON with request IDs)
 server.use(requestLogger);
@@ -70,6 +75,8 @@ server.use(requestLogger);
 const LARGE_BODY_ROUTES = new Set([
     '/api/v1/create-blog',
     '/api/create-blog',
+    '/api/v1/ai/chat', // conversation + article draft as context (see ai.routes.js)
+    '/api/v1/ai/proposals/check', // a proposed article change (up to 20k chars)
 ]);
 const defaultJsonParser = express.json({ limit: '10kb' });
 server.use((req, res, next) => {
@@ -146,6 +153,7 @@ server.use('/api/v1', collectionRoutes);
 server.use('/api/v1', readRoutes);
 server.use('/api/v1', prerenderRoutes);
 server.use('/api/v1', sitemapRoutes);
+server.use('/api/v1', aiRoutes);
 
 // Backward compat: /api/* → /api/v1/* redirect (remove once all clients updated)
 server.use('/api', (req, res, next) => {

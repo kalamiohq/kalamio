@@ -52,6 +52,17 @@ export const apiLimiter = rateLimit({
     message: { error: 'Too many requests. Please slow down.' },
 });
 
+// AI chat — keyed per USER, not IP: each request spends the user's provider credits and our guardrail
+// calls, and a shared office IP shouldn't throttle everyone. Mount AFTER verifyJWT (needs req.user).
+// ponytail: in-memory per instance like the limiters above; move to a shared store if Cloud Run scales out wide.
+export const aiChatLimiter = rateLimit({
+    ...base,
+    keyGenerator: (req) => `ai-chat:${req.user}`,
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 10,                   // 10 AI requests per minute per user
+    message: { error: 'Too many AI requests. Please wait a minute and try again.' },
+});
+
 // Upload — file upload rate limit
 export const uploadLimiter = rateLimit({
     ...base,

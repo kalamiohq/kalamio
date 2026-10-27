@@ -38,6 +38,13 @@ const optionalEnvVars = {
     CLOUDFLARE_ORIGIN_SECRET: process.env.CLOUDFLARE_ORIGIN_SECRET || '',
 };
 
+// Optional — AI assistant. Deliberately NOT copied into the exported object above: these are secrets.
+// AI_KEY_ENCRYPTION_KEY (32 bytes, base64) encrypts users' provider keys at rest; without it the
+// /ai endpoints answer 503. OPENAI_MODERATION_API_KEY enables the Moderation guardrail.
+if (!process.env.AI_KEY_ENCRYPTION_KEY) {
+    console.warn('⚠️  AI_KEY_ENCRYPTION_KEY not set — the AI assistant is disabled');
+}
+
 if (!process.env.FRONTEND_URL) {
     console.warn('⚠️  FRONTEND_URL not set — defaulting to http://localhost:5173');
 }
