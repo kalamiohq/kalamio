@@ -73,6 +73,25 @@ const runStage = async (stageName, text) => {
 export const checkInput = (text) => runStage('input', text);
 export const checkOutput = (text) => runStage('output', text);
 
+// A whole conversation can be far larger than one moderation request should be, so it's checked in
+// slices. Slices overlap so an identifier straddling a boundary is still seen whole in one of them.
+export const GUARDRAIL_CHUNK_CHARS = 16_000;
+const CHUNK_OVERLAP_CHARS = 64;
+
+/** Input-check text of any length (slices in parallel). Returns the first refusal, else ok. */
+export const checkInputText = async (text) => {
+    const slices = [];
+    for (let start = 0; start < text.length; start += GUARDRAIL_CHUNK_CHARS - CHUNK_OVERLAP_CHARS) {
+        slices.push(text.slice(start, start + GUARDRAIL_CHUNK_CHARS));
+        if (start + GUARDRAIL_CHUNK_CHARS >= text.length) break;
+    }
+    const verdicts = await Promise.all(slices.map(checkInput));
+    // A content refusal is more useful to report than an infrastructure one.
+    return verdicts.find(v => !v.ok && v.reason !== 'unavailable' && v.reason !== 'timeout')
+        || verdicts.find(v => !v.ok)
+        || { ok: true };
+};
+
 /** User-facing copy for each refusal. Never includes the offending text. */
 export const GUARDRAIL_MESSAGES = {
     input: {

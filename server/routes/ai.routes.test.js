@@ -25,6 +25,9 @@ const app = express()
 let userSeq = 0
 const newUser = () => `user-${++userSeq}` // fresh id per test → fresh rate-limit bucket
 const auth = (userId) => `Bearer ${jwt.sign({ id: userId }, process.env.JWT_ACCESS_SECRET)}`
+// Each test user gets its own client IP (read from CF-Connecting-IP, as behind Cloudflare), so the
+// per-IP apiLimiter in front of auth doesn't leak between tests. The rate-limit tests use the default IP.
+const ipFor = (userId) => `10.0.${Math.floor(Number(userId.split('-')[1]) / 250)}.${Number(userId.split('-')[1]) % 250}`
 
 // User.findById(...).select(...).lean() → { ai_settings }
 const mockAiSettings = (ai_settings) => {
@@ -51,7 +54,7 @@ const parseSse = (body) => body.split('\n\n').filter(b => b.startsWith('event:')
 })
 const eventsOf = async (res) => parseSse((await res).text)
 
-const chat = (userId, body) => request(app).post('/api/v1/ai/chat').set('Authorization', auth(userId)).send(body)
+const chat = (userId, body) => request(app).post('/api/v1/ai/chat').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId)).send(body)
 let msgSeq = 0
 const user = (content) => ({ id: `m${++msgSeq}`, role: 'user', content })
 const assistant = (content, extra = {}) => ({ id: `m${++msgSeq}`, role: 'assistant', content, ...extra })
@@ -76,7 +79,7 @@ describe('AI settings', () => {
     const userId = newUser()
     mockAiSettings(undefined)
 
-    const res = await request(app).post('/api/v1/ai/settings/update').set('Authorization', auth(userId))
+    const res = await request(app).post('/api/v1/ai/settings/update').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId))
       .send({ provider: 'claude', model: 'claude-opus-5-5', apiKey: `  ${CLAUDE_KEY}  ` })
 
     expect(res.status).toBe(200)
@@ -102,11 +105,11 @@ describe('AI settings', () => {
   it('switches model without re-sending the key, and removes keys', async () => {
     const userId = newUser()
     mockAiSettings(connectedClaude(userId))
-    const switched = await request(app).post('/api/v1/ai/settings/update').set('Authorization', auth(userId))
+    const switched = await request(app).post('/api/v1/ai/settings/update').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId))
       .send({ provider: 'claude', model: 'claude-haiku-5-5' })
     expect(switched.body.providers[0]).toMatchObject({ model: 'claude-haiku-5-5', key_last4: 'kkkk' })
 
-    const removed = await request(app).post('/api/v1/ai/settings/remove').set('Authorization', auth(userId)).send({ provider: 'claude' })
+    const removed = await request(app).post('/api/v1/ai/settings/remove').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId)).send({ provider: 'claude' })
     expect(removed.body).toMatchObject({ active_provider: null, providers: [] })
   })
 
@@ -408,7 +411,7 @@ describe('AI chat — context compaction', () => {
 })
 
 describe('AI proposal check (before applying)', () => {
-  const check = (userId, proposal) => request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId)).send({ proposal })
+  const check = (userId, proposal) => request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId)).send({ proposal })
 
   it('returns sanitized content for a valid, edited proposal', async () => {
     const res = await check(newUser(), { operation: 'replace', target: { type: 'section', section: 'Training' }, content: '<p onclick="x()">Edited <a href="javascript:alert(1)">link</a></p>' })
@@ -481,10 +484,10 @@ describe('AI chat — precise text fixes (editText)', () => {
 
   it('checks approved fixes on apply, and replays them to the model as an editText call', async () => {
     const userId = readyUser()
-    const check = await request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId))
+    const check = await request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId))
       .send({ proposal: { operation: 'edit', target: { type: 'text' }, edits: [{ find: 'evn', replace: 'even' }] } })
     expect(check.body.proposal.edits).toEqual([{ find: 'evn', replace: 'even' }])
-    const blocked = await request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId))
+    const blocked = await request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId)).set('CF-Connecting-IP', ipFor(userId))
       .send({ proposal: { operation: 'edit', target: { type: 'text' }, edits: [{ find: 'x', replace: 'SSN 123-45-6789' }] } })
     expect(blocked.status).toBe(422)
 
@@ -497,5 +500,45 @@ describe('AI chat — precise text fixes (editText)', () => {
     expect((await chat(userId, { messages, article: SPELLING })).status).toBe(200)
     expect(streamText.mock.calls[0][0].messages[1].content[1]).toEqual(
       { type: 'tool-call', toolCallId: 'call_7', toolName: 'editText', input: { edits: [{ find: 'evn', replace: 'even' }] } })
+  })
+})
+
+describe('AI chat — input guardrails cover the whole conversation', () => {
+  it('blocks when an EARLIER message has high-risk data, even if the latest is harmless', async () => {
+    const userId = readyUser()
+    const messages = [user('My SSN is 123-45-6789, keep it in mind'), assistant('Noted.'), user('Now suggest a title')]
+    const res = await chat(userId, { messages })
+    expect(res.status).toBe(422)
+    expect(res.body.error).not.toContain('123-45-6789')
+    expect(streamText).not.toHaveBeenCalled()
+  })
+
+  it('screens messages that would be summarized before the summarizer ever sees them', async () => {
+    const userId = readyUser()
+    const messages = [user('Card 4111 1111 1111 1111'), ...Array.from({ length: 12 }, (_, i) => (i % 2 ? user(`q${i}`) : assistant(`a${i}`)))]
+    expect((await chat(userId, { messages })).status).toBe(422)
+    expect(generateText).not.toHaveBeenCalled()
+    expect(streamText).not.toHaveBeenCalled()
+  })
+
+  it('also screens proposal content echoed back in history', async () => {
+    const userId = readyUser()
+    const messages = [
+      user('Add a line'),
+      assistant('Sure.', { toolCall: { id: 'c1', operation: 'append', target: { type: 'end' }, content: '<p>SSN 123-45-6789</p>' } }),
+      { id: 'mt', role: 'tool', toolCallId: 'c1', operation: 'append', result: { status: 'cancelled' } },
+      user('ok'),
+    ]
+    expect((await chat(userId, { messages })).status).toBe(422)
+  })
+})
+
+describe('AI chat / proposal check rate limit before auth', () => {
+  it('throttles requests per IP before checking the token', async () => {
+    // The per-IP bucket is shared with earlier tests in this file, so just drive it past 100.
+    let last
+    for (let i = 0; i < 101 && last?.status !== 429; i++) last = await request(app).post('/api/v1/ai/chat').send({})
+    expect(last.status).toBe(429) // unauthenticated, yet limited — never reached verifyJWT's 401
+    expect((await request(app).post('/api/v1/ai/proposals/check').send({})).status).toBe(429)
   })
 })

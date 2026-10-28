@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { TOOL_NAME_BY_OPERATION, proposalToToolInput, htmlToText } from './editor-tools.js';
+import { TOOL_NAME_BY_OPERATION, proposalToToolInput, htmlToText, proposalText } from './editor-tools.js';
 
 /**
  * Conversation context for the AI assistant — stateless on the server.
@@ -70,6 +70,16 @@ export const summarizeIncrementally = async ({ model, previousSummary, archived,
     if (!summary) throw new Error('Empty summary');
     return summary;
 };
+
+/**
+ * All text in a conversation, unclipped — what the input guardrails must screen before ANY provider
+ * call (the chat call, and the summarizer, which receives archived messages).
+ */
+export const conversationText = (messages) => messages.map((m) => {
+    if (m.role === 'user') return m.content;
+    if (m.role === 'tool') return m.result.message || '';
+    return [m.content, m.toolCall ? proposalText(m.toolCall) : ''].filter(Boolean).join('\n');
+}).filter(Boolean).join('\n\n');
 
 /** Wire messages → AI SDK ModelMessages (tool calls and results as structured parts). */
 export const toModelMessages = (messages) => messages.map((m) => {

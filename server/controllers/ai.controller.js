@@ -2,9 +2,9 @@ import { streamText, APICallError } from 'ai';
 import User from '../Schema/User.js';
 import { AI_PROVIDERS, publicCatalog, isSupportedModel, validateApiKeyFormat, createLanguageModel } from '../services/ai/providers.js';
 import { encryptApiKey, decryptApiKey, isKeyEncryptionConfigured } from '../services/ai/key-crypto.js';
-import { checkInput, checkOutput, GUARDRAIL_MESSAGES, guardrailStatus } from '../services/ai/guardrails.js';
+import { checkInputText, checkOutput, GUARDRAIL_MESSAGES, guardrailStatus } from '../services/ai/guardrails.js';
 import { EDITOR_TOOLS, CONTENT_FORMAT, toolCallToProposal, sanitizeProposalHtml, proposalText } from '../services/ai/editor-tools.js';
-import { planCompaction, summarizeIncrementally, toModelMessages } from '../services/ai/context.js';
+import { planCompaction, summarizeIncrementally, toModelMessages, conversationText } from '../services/ai/context.js';
 
 // Logging rule for this whole file: never log keys, prompts, article text or provider error
 // messages/bodies (APICallError carries the full request body). Provider + model + status only.
@@ -196,12 +196,13 @@ export const chat = async (req, res) => {
         return res.status(409).json({ error: `Your saved ${AI_PROVIDERS[providerId].name} key can't be used anymore. Please add it again.`, code: 'key_unreadable' });
     }
 
-    // Input guardrails: the newest turn (the author's message, or the reported tool result) plus the
-    // client-held summary — both are client-supplied text about to reach the model.
-    const latest = messages.at(-1);
-    const inputText = [context?.summary, latest.role === 'user' ? latest.content : latest.result.message].filter(Boolean).join('\n\n');
+    // Input guardrails over EVERYTHING client-supplied that a provider will receive: the summary and the
+    // whole conversation (older messages go to the chat call, or to the summarizer when compacted) —
+    // before compaction or either provider call. Checking only the latest turn let an earlier message
+    // with e.g. a card number through.
+    const inputText = [context?.summary, conversationText(messages)].filter(Boolean).join('\n\n');
     if (inputText) {
-        const inputVerdict = await checkInput(inputText);
+        const inputVerdict = await checkInputText(inputText);
         if (!inputVerdict.ok) {
             return res.status(guardrailStatus(inputVerdict.reason)).json({
                 error: GUARDRAIL_MESSAGES.input[inputVerdict.reason],

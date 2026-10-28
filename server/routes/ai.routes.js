@@ -21,11 +21,12 @@ router.post('/ai/settings', apiLimiter, verifyJWT, asyncHandler(getAiSettings));
 router.post('/ai/settings/update', apiLimiter, verifyJWT, validate(aiProviderUpdateSchema), asyncHandler(updateAiProvider));
 router.post('/ai/settings/remove', apiLimiter, verifyJWT, validate(aiProviderRemoveSchema), asyncHandler(removeAiProvider));
 
-// ── Chat (SSE stream) ── rate limit is per user, so it must come after verifyJWT.
-router.post('/ai/chat', verifyJWT, aiChatLimiter, chatBody, validate(aiChatSchema), asyncHandler(chat));
+// ── Chat (SSE stream) ── two limits: apiLimiter (per IP) before auth throttles floods of bad/missing
+// tokens; aiChatLimiter (per user) after auth caps each user's AI requests.
+router.post('/ai/chat', apiLimiter, verifyJWT, aiChatLimiter, chatBody, validate(aiChatSchema), asyncHandler(chat));
 
 // ── Article changes ── the author's approved (possibly edited) proposal is checked here before the
 // browser applies it. Shares the chat limiter: applying a change also triggers a follow-up reply.
-router.post('/ai/proposals/check', verifyJWT, aiChatLimiter, proposalBody, validate(aiProposalCheckSchema), asyncHandler(checkProposal));
+router.post('/ai/proposals/check', apiLimiter, verifyJWT, aiChatLimiter, proposalBody, validate(aiProposalCheckSchema), asyncHandler(checkProposal));
 
 export default router;

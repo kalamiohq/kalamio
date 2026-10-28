@@ -15,7 +15,8 @@ const clean = { results: [{ flagged: false, categories: {} }] }
 describe('AI guardrails', () => {
   let saved
   beforeEach(() => { saved = process.env.OPENAI_MODERATION_API_KEY; delete process.env.OPENAI_MODERATION_API_KEY })
-  afterEach(() => { process.env.OPENAI_MODERATION_API_KEY = saved })
+  // Assigning undefined to process.env stores the string "undefined" — delete instead.
+  afterEach(() => { if (saved === undefined) delete process.env.OPENAI_MODERATION_API_KEY; else process.env.OPENAI_MODERATION_API_KEY = saved })
 
   it('allows normal writing requests, including names, emails, numbers and URLs', async () => {
     await expect(checkInput('Tighten the intro. Quote Jane Doe (jane@example.com), cite https://example.com and the 1428627663 figure.'))
@@ -63,5 +64,17 @@ describe('AI guardrails', () => {
     moderationsCreate.mockRejectedValueOnce(Object.assign(new Error('upstream down'), { status: 500 }))
     vi.spyOn(console, 'warn').mockImplementation(() => {}) // the package warns on execution failures
     await expect(checkInput('hello')).resolves.toEqual({ ok: false, reason: 'unavailable' })
+  })
+})
+
+describe('checkInputText (any length)', () => {
+  it('finds high-risk data anywhere in a long text, including across a slice boundary', async () => {
+    const { checkInputText, GUARDRAIL_CHUNK_CHARS } = await import('./guardrails.js')
+    const filler = 'lorem ipsum '.repeat(Math.ceil(GUARDRAIL_CHUNK_CHARS / 12))
+    await expect(checkInputText(filler + filler)).resolves.toEqual({ ok: true })
+    await expect(checkInputText(filler + filler + ' SSN 123-45-6789')).resolves.toEqual({ ok: false, reason: 'pii' })
+    // Straddle the first slice boundary.
+    const straddle = filler.slice(0, GUARDRAIL_CHUNK_CHARS - 6) + ' 123-45-6789 ' + filler
+    await expect(checkInputText(straddle)).resolves.toEqual({ ok: false, reason: 'pii' })
   })
 })
