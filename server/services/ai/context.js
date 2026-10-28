@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { TOOL_NAME_BY_OPERATION, proposalToToolInput, htmlToText, proposalText } from './editor-tools.js';
+import { TOOL_NAME_BY_OPERATION, proposalToToolInput, htmlToText } from './editor-tools.js';
 
 /**
  * Conversation context for the AI assistant — stateless on the server.
@@ -72,14 +72,33 @@ export const summarizeIncrementally = async ({ model, previousSummary, archived,
 };
 
 /**
+ * Every string of a historical tool call that is replayed to the provider (see proposalToToolInput):
+ * section name, each fix's `find` AND `replace`, and the content. proposalText alone isn't enough —
+ * it's what would be ADDED to the article, so it skips `find` and the section name.
+ */
+const toolCallText = (call) => [
+    call.target.section,
+    ...(call.edits || []).flatMap(e => [e.find, e.replace]),
+    call.content ? htmlToText(call.content) : '',
+].filter(Boolean).join('\n');
+
+/**
  * All text in a conversation, unclipped — what the input guardrails must screen before ANY provider
  * call (the chat call, and the summarizer, which receives archived messages).
  */
 export const conversationText = (messages) => messages.map((m) => {
     if (m.role === 'user') return m.content;
     if (m.role === 'tool') return m.result.message || '';
-    return [m.content, m.toolCall ? proposalText(m.toolCall) : ''].filter(Boolean).join('\n');
+    return [m.content, m.toolCall ? toolCallText(m.toolCall) : ''].filter(Boolean).join('\n');
 }).filter(Boolean).join('\n\n');
+
+/** Every article field that goes to the provider in the instructions (title, outline, selection, body). */
+export const articleScreenText = (article) => (article ? [
+    article.title,
+    ...article.outline.map(h => h.text),
+    article.selection?.text,
+    article.text,
+].filter(Boolean).join('\n\n') : '');
 
 /** Wire messages → AI SDK ModelMessages (tool calls and results as structured parts). */
 export const toModelMessages = (messages) => messages.map((m) => {

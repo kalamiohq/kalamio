@@ -106,6 +106,13 @@ export const GUARDRAIL_MESSAGES = {
         unavailable: 'The response was stopped because safety checks are temporarily unavailable. Please try again.',
         timeout: 'The response was stopped because safety checks took too long. Please try again.',
     },
+    // The draft itself is sent to the provider as context, so it's screened like a message.
+    article: {
+        pii: 'Your article contains sensitive personal data (such as a card, ID or bank number). The draft is shared with your AI provider as context, so remove it before using the assistant.',
+        moderation: "Your article can't be shared with the AI provider because it may violate content guidelines.",
+        unavailable: 'Safety checks are temporarily unavailable. Please try again in a moment.',
+        timeout: 'Safety checks took too long to respond. Please try again in a moment.',
+    },
     // Article changes (the assistant's proposal, and the author's edited version before it's applied).
     proposal: {
         pii: 'This change contains sensitive personal data (such as a card, ID or bank number), so it can’t be applied.',

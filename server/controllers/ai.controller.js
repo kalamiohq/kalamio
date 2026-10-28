@@ -4,7 +4,7 @@ import { AI_PROVIDERS, publicCatalog, isSupportedModel, validateApiKeyFormat, cr
 import { encryptApiKey, decryptApiKey, isKeyEncryptionConfigured } from '../services/ai/key-crypto.js';
 import { checkInputText, checkOutput, GUARDRAIL_MESSAGES, guardrailStatus } from '../services/ai/guardrails.js';
 import { EDITOR_TOOLS, CONTENT_FORMAT, toolCallToProposal, sanitizeProposalHtml, proposalText } from '../services/ai/editor-tools.js';
-import { planCompaction, summarizeIncrementally, toModelMessages, conversationText } from '../services/ai/context.js';
+import { planCompaction, summarizeIncrementally, toModelMessages, conversationText, articleScreenText } from '../services/ai/context.js';
 
 // Logging rule for this whole file: never log keys, prompts, article text or provider error
 // messages/bodies (APICallError carries the full request body). Provider + model + status only.
@@ -196,19 +196,23 @@ export const chat = async (req, res) => {
         return res.status(409).json({ error: `Your saved ${AI_PROVIDERS[providerId].name} key can't be used anymore. Please add it again.`, code: 'key_unreadable' });
     }
 
-    // Input guardrails over EVERYTHING client-supplied that a provider will receive: the summary and the
-    // whole conversation (older messages go to the chat call, or to the summarizer when compacted) —
-    // before compaction or either provider call. Checking only the latest turn let an earlier message
-    // with e.g. a card number through.
-    const inputText = [context?.summary, conversationText(messages)].filter(Boolean).join('\n\n');
-    if (inputText) {
-        const inputVerdict = await checkInputText(inputText);
-        if (!inputVerdict.ok) {
-            return res.status(guardrailStatus(inputVerdict.reason)).json({
-                error: GUARDRAIL_MESSAGES.input[inputVerdict.reason],
-                code: guardrailStatus(inputVerdict.reason) === 503 ? 'guardrail_unavailable' : 'blocked',
-            });
-        }
+    // Input guardrails over EVERYTHING client-supplied that a provider will receive, before compaction or
+    // either provider call: the summary, the whole conversation (incl. every replayed tool-call field),
+    // and the article (title, outline, selection, body — all sent in the instructions). Checked
+    // separately so the refusal can say which one to fix.
+    const screens = [
+        { text: [context?.summary, conversationText(messages)].filter(Boolean).join('\n\n'), messages: GUARDRAIL_MESSAGES.input, source: 'conversation' },
+        { text: articleScreenText(article), messages: GUARDRAIL_MESSAGES.article, source: 'article' },
+    ].filter(s => s.text);
+    const verdicts = await Promise.all(screens.map(s => checkInputText(s.text)));
+    const refused = verdicts.findIndex(v => !v.ok);
+    if (refused !== -1) {
+        const { reason } = verdicts[refused];
+        return res.status(guardrailStatus(reason)).json({
+            error: screens[refused].messages[reason],
+            code: guardrailStatus(reason) === 503 ? 'guardrail_unavailable' : 'blocked',
+            source: screens[refused].source,
+        });
     }
 
     const userKey = String(req.user);

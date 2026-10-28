@@ -186,7 +186,9 @@ export const finalizeProposal = (proposal, article) => {
     let target = p.target;
     if (SECTION_TARGETS.has(target.type)) {
         const heading = findSection(article?.outline, target.section);
-        if (!heading) return { ok: false, error: `There's no section titled "${target.section}" in the article.` };
+        // Don't echo the model-written section name: errors reach the browser as `notice` events, which
+        // bypass the output guardrails.
+        if (!heading) return { ok: false, error: "The section it named isn't in the article." };
         target = { ...target, section: heading.text }; // normalize to the article's exact heading text
     }
     if (target.type === 'selection' && !article?.selection?.text?.trim()) {

@@ -277,7 +277,7 @@ describe('AI chat — article edit proposals', () => {
   })
 
   it.each([
-    ['insertContent', { location: 'after_section', section: 'Nope', content: 'x' }, /no section titled "Nope"/],
+    ['insertContent', { location: 'after_section', section: 'Nope', content: 'x' }, /section it named isn't in the article/],
     ['insertContent', { location: 'end', content: 'x' }, /isn't a valid location for insert/],
     ['appendContent', { location: 'end_of_section', content: 'x' }, /section heading is required/],
     ['replaceContent', { target: 'section', section: 'Training', content: '<script>x</script>' }, /empty/],
@@ -540,5 +540,49 @@ describe('AI chat / proposal check rate limit before auth', () => {
     for (let i = 0; i < 101 && last?.status !== 429; i++) last = await request(app).post('/api/v1/ai/chat').send({})
     expect(last.status).toBe(429) // unauthenticated, yet limited — never reached verifyJWT's 401
     expect((await request(app).post('/api/v1/ai/proposals/check').send({})).status).toBe(429)
+  })
+})
+
+describe('AI chat — everything sent to the provider is screened', () => {
+  it('screens `find` and section names in replayed tool calls, not just what they add', async () => {
+    const userId = readyUser()
+    const viaFind = [
+      user('Fix it'),
+      assistant('Fixed.', { toolCall: { id: 'c1', operation: 'edit', target: { type: 'text' }, edits: [{ find: 'SSN 123-45-6789', replace: 'SSN redacted' }] } }),
+      { id: 't1', role: 'tool', toolCallId: 'c1', operation: 'edit', result: { status: 'applied' } },
+      user('thanks'),
+    ]
+    expect((await chat(userId, { messages: viaFind })).status).toBe(422)
+
+    const viaSection = [
+      user('Add a line'),
+      assistant('Sure.', { toolCall: { id: 'c2', operation: 'append', target: { type: 'end_of_section', section: 'Card 4111 1111 1111 1111' }, content: '<p>ok</p>' } }),
+      { id: 't2', role: 'tool', toolCallId: 'c2', operation: 'append', result: { status: 'cancelled' } },
+      user('thanks'),
+    ]
+    expect((await chat(userId, { messages: viaSection })).status).toBe(422)
+    expect(streamText).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['body', { text: 'My SSN is 123-45-6789.' }],
+    ['title', { title: 'Card 4111 1111 1111 1111' }],
+    ['outline', { outline: [{ text: 'SSN 123-45-6789', level: 2 }] }],
+    ['selection', { selection: { text: 'SSN 123-45-6789' } }],
+  ])('refuses to send an article whose %s holds high-risk data', async (_, fields) => {
+    const userId = readyUser()
+    const res = await chat(userId, { ...userMsg('Suggest a title'), article: { ...ARTICLE, ...fields } })
+    expect(res.status).toBe(422)
+    expect(res.body).toMatchObject({ code: 'blocked', source: 'article' })
+    expect(res.body.error).toMatch(/Your article contains sensitive personal data/)
+    expect(res.body.error).not.toMatch(/123-45-6789|4111/)
+    expect(streamText).not.toHaveBeenCalled()
+  })
+
+  it('does not echo model-written section names in notices', async () => {
+    const userId = readyUser()
+    mockModelStream(toolCall('insertContent', { location: 'after_section', section: 'Call 555-0100 now', content: 'x' }))
+    const events = await eventsOf(chat(userId, { ...userMsg('Add'), article: ARTICLE }))
+    expect(events.find(e => e.event === 'notice').data.message).not.toContain('555-0100')
   })
 })
