@@ -176,9 +176,4 @@ const userSchema = mongoose.Schema({
 
 })
 
-// ── Indexes for query performance ──────────────────────────────────
-// unique: true in schema creates indexes, but explicit indexes ensure clarity
-userSchema.index({ 'personal_info.email': 1 });      // login lookups
-userSchema.index({ 'personal_info.username': 1 });    // profile lookups, search
-
 export default mongoose.model("users", userSchema);
