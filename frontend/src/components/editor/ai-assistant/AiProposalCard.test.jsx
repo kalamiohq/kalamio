@@ -3,35 +3,39 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import AiProposalCard from './AiProposalCard'
 
 const PENDING = { status: 'pending' }
+const NO_REMOVAL = { stale: false, counts: {} }
 const proposal = (operation, type, extra = {}) => ({ id: 'c1', operation, target: { type, ...extra }, content: '<p>Proposed text</p>' })
 const renderCard = (props) => {
   const handlers = { onApply: vi.fn(), onCancel: vi.fn() }
-  render(<AiProposalCard state={PENDING} resolved={{ ok: true }} {...props} {...handlers} />)
+  render(<AiProposalCard state={PENDING} removal={NO_REMOVAL} {...props} {...handlers} />)
   return handlers
 }
 const apply = () => screen.getByRole('button', { name: 'Apply Changes' })
-// The preview is a real TipTap editor; drive it through its API (jsdom can't type into contenteditable).
+// The green preview is a real TipTap editor; drive it through its API (jsdom can't type into contenteditable).
 const previewEditor = () => document.querySelector('.ProseMirror').editor
 
-describe('AiProposalCard', () => {
-  it('shows the operation, location and editable proposed content', () => {
+describe('AiProposalCard (inline review)', () => {
+  it('shows the operation, location and the proposed content as editable green text', () => {
     renderCard({ proposal: proposal('insert', 'after_section', { section: 'Training' }) })
-    expect(screen.getByRole('heading', { name: 'Proposed change: Insert' })).toBeInTheDocument()
-    expect(screen.getByText('After the section “Training”')).toBeInTheDocument()
-    expect(screen.getByRole('textbox')).toHaveTextContent('Proposed text')
+    expect(screen.getByText('AI suggestion')).toBeInTheDocument()
+    expect(screen.getByText('Insert')).toBeInTheDocument()
+    expect(screen.getByText('· After the section “Training”')).toBeInTheDocument()
+    const box = screen.getByRole('textbox')
+    expect(box).toHaveTextContent('Proposed text')
+    expect(box).toHaveClass('ai-suggestion-insert')
     expect(previewEditor().isEditable).toBe(true)
   })
 
-  it('applies only on an explicit click, with the author\'s edits', () => {
+  it("applies only on an explicit click, with the author's edits", () => {
     const { onApply, onCancel } = renderCard({ proposal: proposal('append', 'end') })
-    expect(onApply).not.toHaveBeenCalled() // rendering a proposal never applies it
+    expect(onApply).not.toHaveBeenCalled() // showing a proposal never applies it
     act(() => { previewEditor().commands.setContent('<p>My edited text</p>', true) })
     fireEvent.click(apply())
     expect(onApply).toHaveBeenCalledWith('<p>My edited text</p>', true)
     expect(onCancel).not.toHaveBeenCalled()
   })
 
-  it('passes edited=false when the proposal is applied as-is', () => {
+  it('passes edited=false when applied as-is', () => {
     const { onApply } = renderCard({ proposal: proposal('append', 'end') })
     fireEvent.click(apply())
     expect(onApply).toHaveBeenCalledWith('<p>Proposed text</p>', false)
@@ -51,16 +55,16 @@ describe('AiProposalCard', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Add some content, or cancel.')
   })
 
-  it('shows the content being replaced next to the replacement', () => {
-    renderCard({ proposal: proposal('replace', 'section', { section: 'Race day' }), resolved: { ok: true, existingText: 'It rained.' } })
-    expect(screen.getByText('Current content')).toBeInTheDocument()
-    expect(screen.getByText('It rained.')).toBeInTheDocument()
-    expect(screen.getByText(/Replacement/)).toBeInTheDocument()
+  it('points at the red highlight for replacements, and warns about media it would remove', () => {
+    renderCard({ proposal: proposal('replace', 'section', { section: 'Gallery' }), removal: { stale: false, counts: { image: 2, table: 1 } } })
+    expect(screen.getByText('The text highlighted in red above will be replaced.')).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('This also removes 2 images and 1 table (outlined in red).')
+    expect(apply()).toBeEnabled() // a warning, not a block — undo works
   })
 
   it('requires explicit confirmation to replace the entire draft', () => {
-    const { onApply } = renderCard({ proposal: proposal('replace', 'entire_article'), resolved: { ok: true, existingText: 'Old draft' } })
-    expect(screen.getByRole('heading', { name: 'Replace entire draft' })).toBeInTheDocument()
+    const { onApply } = renderCard({ proposal: proposal('replace', 'entire_article') })
+    expect(screen.getByText('Replace entire draft')).toBeInTheDocument()
     expect(apply()).toBeDisabled()
     fireEvent.click(apply())
     expect(onApply).not.toHaveBeenCalled()
@@ -71,18 +75,19 @@ describe('AiProposalCard', () => {
     expect(onApply).toHaveBeenCalledTimes(1)
   })
 
-  it('cannot apply when the target no longer resolves, or while another reply streams', () => {
-    renderCard({ proposal: proposal('replace', 'selection'), resolved: { ok: false, error: 'The selected text has changed since you asked.' } })
+  it('cannot apply once the text it replaces was deleted', () => {
+    renderCard({ proposal: proposal('replace', 'selection'), removal: { stale: true, counts: {} } })
     expect(apply()).toBeDisabled()
-    expect(screen.getByRole('alert')).toHaveTextContent('The selected text has changed')
+    expect(screen.getByRole('alert')).toHaveTextContent('has been deleted')
   })
 
   it('disables applying while busy and shows final states without actions', () => {
-    const { rerender } = render(<AiProposalCard proposal={proposal('append', 'end')} state={PENDING} resolved={{ ok: true }} busy onApply={vi.fn()} onCancel={vi.fn()} />)
+    const p = proposal('append', 'end')
+    const { rerender } = render(<AiProposalCard proposal={p} state={PENDING} removal={NO_REMOVAL} busy onApply={vi.fn()} onCancel={vi.fn()} />)
     expect(apply()).toBeDisabled()
-    rerender(<AiProposalCard proposal={proposal('append', 'end')} state={{ status: 'applied' }} resolved={{ ok: true }} onApply={vi.fn()} onCancel={vi.fn()} />)
+    rerender(<AiProposalCard proposal={p} state={{ status: 'applied' }} removal={NO_REMOVAL} onApply={vi.fn()} onCancel={vi.fn()} />)
     expect(screen.queryByRole('button', { name: 'Apply Changes' })).toBeNull()
-    expect(screen.getByText(/Applied to your article/)).toBeInTheDocument()
+    expect(screen.getByText(/Applied\. Undo with Ctrl\+Z/)).toBeInTheDocument()
     expect(previewEditor().isEditable).toBe(false)
   })
 })

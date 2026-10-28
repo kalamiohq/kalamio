@@ -95,9 +95,9 @@ const parseEvent = (block) => {
  * @returns {Promise<{ ok: true, content: string } | { ok: false, message: string }>} `content` is the
  *   sanitized HTML that may be applied — exactly what was checked.
  */
-export const checkProposal = async ({ operation, target, content }) => {
+export const checkProposal = async ({ operation, target, content, edits }) => {
   try {
-    const { data } = await api.post('/ai/proposals/check', { proposal: { operation, target, content } });
+    const { data } = await api.post("/ai/proposals/check", { proposal: { operation, target, ...(edits ? { edits } : { content }) } });
     return { ok: true, content: data.proposal.content };
   } catch (err) {
     const data = err?.response?.data;

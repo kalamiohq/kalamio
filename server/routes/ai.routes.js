@@ -3,7 +3,7 @@ import express from 'express';
 import { verifyJWT } from '../middleware/auth.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import validate from '../middleware/validate.js';
-import { aiChatLimiter } from '../middleware/rateLimiter.js';
+import { aiChatLimiter, apiLimiter } from '../middleware/rateLimiter.js';
 import { aiChatSchema, aiProviderUpdateSchema, aiProviderRemoveSchema, aiProposalCheckSchema } from '../validators/schemas.js';
 import { getAiSettings, updateAiProvider, removeAiProvider, chat, checkProposal } from '../controllers/ai.controller.js';
 
@@ -16,9 +16,10 @@ const chatBody = express.json({ limit: '1mb' });
 const proposalBody = express.json({ limit: '100kb' });
 
 // ── Settings (keys are encrypted server-side; responses never include them) ──
-router.post('/ai/settings', verifyJWT, asyncHandler(getAiSettings));
-router.post('/ai/settings/update', verifyJWT, validate(aiProviderUpdateSchema), asyncHandler(updateAiProvider));
-router.post('/ai/settings/remove', verifyJWT, validate(aiProviderRemoveSchema), asyncHandler(removeAiProvider));
+// apiLimiter (per IP) runs BEFORE auth so unauthenticated floods are throttled too.
+router.post('/ai/settings', apiLimiter, verifyJWT, asyncHandler(getAiSettings));
+router.post('/ai/settings/update', apiLimiter, verifyJWT, validate(aiProviderUpdateSchema), asyncHandler(updateAiProvider));
+router.post('/ai/settings/remove', apiLimiter, verifyJWT, validate(aiProviderRemoveSchema), asyncHandler(removeAiProvider));
 
 // ── Chat (SSE stream) ── rate limit is per user, so it must come after verifyJWT.
 router.post('/ai/chat', verifyJWT, aiChatLimiter, chatBody, validate(aiChatSchema), asyncHandler(chat));

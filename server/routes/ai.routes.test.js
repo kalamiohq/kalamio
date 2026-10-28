@@ -138,7 +138,7 @@ describe('AI chat — streaming and guardrails', () => {
     expect(call.instructions).toContain('- Training')
     expect(call.instructions).toContain('<selection>\nIt rained.')
     expect(call.model.modelId).toBe('claude-sonnet-5-5')
-    expect(Object.keys(call.tools)).toEqual(['insertContent', 'appendContent', 'replaceContent'])
+    expect(Object.keys(call.tools)).toEqual(['insertContent', 'appendContent', 'replaceContent', 'editText'])
     expect(Object.values(call.tools).every(t => !t.execute)).toBe(true) // tools can never act on their own
     expect(typeof call.onError).toBe('function') // replaces the SDK default, which logs the prompt
   })
@@ -432,5 +432,70 @@ describe('AI proposal check (before applying)', () => {
   it('requires authentication', async () => {
     const res = await request(app).post('/api/v1/ai/proposals/check').send({ proposal: { operation: 'append', target: { type: 'end' }, content: 'x' } })
     expect(res.status).toBe(401)
+  })
+})
+
+describe('AI settings rate limit', () => {
+  it('throttles the settings routes per IP, before authentication', async () => {
+    mockAiSettings(undefined)
+    let last
+    // Unauthenticated requests still count — the limiter runs before verifyJWT.
+    for (let i = 0; i < 101; i++) last = await request(app).post('/api/v1/ai/settings').send({})
+    expect(last.status).toBe(429)
+    expect((await request(app).post('/api/v1/ai/settings/update').set('Authorization', auth(newUser())).send({})).status).toBe(429)
+  })
+})
+
+describe('AI chat — precise text fixes (editText)', () => {
+  const SPELLING = { ...ARTICLE, text: 'Tasks are too uneliable to run inline, such some cases need evn more care.' }
+
+  it('proposes only the fixes whose text is really in the article', async () => {
+    const userId = readyUser()
+    mockModelStream(delta('Fixing the spelling.'), toolCall('editText', { edits: [
+      { find: 'too uneliable to', replace: 'too unreliable to' },
+      { find: 'evn more', replace: 'even more' },
+      { find: 'not in the article', replace: 'x' },
+    ] }))
+    const events = await eventsOf(chat(userId, { ...userMsg('Fix the spelling'), article: SPELLING }))
+    expect(events.find(e => e.event === 'proposal').data).toEqual({
+      toolCallId: 'call_1', operation: 'edit', target: { type: 'text' },
+      edits: [{ find: 'too uneliable to', replace: 'too unreliable to' }, { find: 'evn more', replace: 'even more' }],
+    })
+  })
+
+  it('never matches mid-word, and rejects no-op or multi-paragraph fixes', async () => {
+    const userId = readyUser()
+    // "such s" only occurs inside "such some" → not a whole-word match → nothing to fix.
+    mockModelStream(toolCall('editText', { edits: [{ find: 'such s', replace: 'such as' }] }))
+    let events = await eventsOf(chat(userId, { ...userMsg('Fix it'), article: SPELLING }))
+    expect(events.find(e => e.event === 'notice').data.message).toMatch(/None of the text/)
+
+    mockModelStream(toolCall('editText', { edits: [{ find: 'evn', replace: 'evn' }] }))
+    events = await eventsOf(chat(userId, { ...userMsg('Fix it'), article: SPELLING }))
+    expect(events.find(e => e.event === 'notice').data.message).toMatch(/must change the text/)
+
+    mockModelStream(toolCall('editText', { edits: [{ find: 'evn\nmore', replace: 'even more' }] }))
+    events = await eventsOf(chat(userId, { ...userMsg('Fix it'), article: SPELLING }))
+    expect(events.find(e => e.event === 'notice').data.message).toMatch(/within one paragraph/)
+  })
+
+  it('checks approved fixes on apply, and replays them to the model as an editText call', async () => {
+    const userId = readyUser()
+    const check = await request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId))
+      .send({ proposal: { operation: 'edit', target: { type: 'text' }, edits: [{ find: 'evn', replace: 'even' }] } })
+    expect(check.body.proposal.edits).toEqual([{ find: 'evn', replace: 'even' }])
+    const blocked = await request(app).post('/api/v1/ai/proposals/check').set('Authorization', auth(userId))
+      .send({ proposal: { operation: 'edit', target: { type: 'text' }, edits: [{ find: 'x', replace: 'SSN 123-45-6789' }] } })
+    expect(blocked.status).toBe(422)
+
+    mockModelStream(delta('Done.'))
+    const messages = [
+      user('Fix spelling'),
+      assistant('Two fixes.', { toolCall: { id: 'call_7', operation: 'edit', target: { type: 'text' }, edits: [{ find: 'evn', replace: 'even' }] } }),
+      { id: 'm-t', role: 'tool', toolCallId: 'call_7', operation: 'edit', result: { status: 'applied' } },
+    ]
+    expect((await chat(userId, { messages, article: SPELLING })).status).toBe(200)
+    expect(streamText.mock.calls[0][0].messages[1].content[1]).toEqual(
+      { type: 'tool-call', toolCallId: 'call_7', toolName: 'editText', input: { edits: [{ find: 'evn', replace: 'even' }] } })
   })
 })

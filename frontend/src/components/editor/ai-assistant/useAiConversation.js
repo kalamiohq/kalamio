@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { streamAiChat, checkProposal } from "../../../common/ai-chat";
-import { applyProposal as applyToEditor, captureEditorContext, editorAvailable } from "../../../common/ai-editor";
+import { applyProposal as applyToEditor, articleText, captureEditorContext, editorAvailable } from "../../../common/ai-editor";
 
 // Mirror the server's AI_LIMITS (server/validators/schemas.js) so requests are trimmed, not rejected.
 const MESSAGE_CHARS = 8000;
@@ -33,7 +33,7 @@ export const toWireMessages = (messages, through) => {
             const resolved = m.proposal && list[i + 1]?.role === "tool";
             wire.push({
                 id: m.id, role: "assistant", content: m.content.slice(0, MESSAGE_CHARS),
-                ...(resolved ? { toolCall: { id: m.proposal.id, operation: m.proposal.operation, target: m.proposal.target, content: m.proposal.content } } : {}),
+                ...(resolved ? { toolCall: { id: m.proposal.id, operation: m.proposal.operation, target: m.proposal.target, ...(m.proposal.edits ? { edits: m.proposal.edits } : { content: m.proposal.content }) } } : {}),
             });
         } else {
             wire.push({ id: m.id, role: "tool", toolCallId: m.toolCallId, operation: m.operation, result: m.result });
@@ -68,6 +68,9 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
     const streamingRef = useRef(false);
     const abortRef = useRef(null);
     const handledRef = useRef(new Set()); // proposal ids already approved/cancelled
+    // Bumped by reset() and on unmount. Async flows capture it and stop after an `await` if it changed,
+    // so nothing from an old conversation (or a closed editor) applies changes or patches state.
+    const sessionRef = useRef(0);
     const live = useRef({});
     live.current = { editor, title, provider, model };
 
@@ -77,8 +80,9 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
     }, []);
     const patch = useCallback((id, fn) => setMessages(list => list.map(m => (m.id === id ? { ...m, ...fn(m) } : m))), [setMessages]);
 
-    // Leaving the editor stops any in-flight reply (and the provider tokens it would spend).
-    useEffect(() => () => abortRef.current?.abort(), []);
+    // Leaving the editor stops any in-flight reply (and the provider tokens it would spend) and
+    // invalidates any approval still waiting on the server check.
+    useEffect(() => () => { sessionRef.current += 1; abortRef.current?.abort(); }, []);
 
     const acceptContext = (next) => {
         if (!next.summary) return; // compaction failed: keep the current summary + full history
@@ -92,11 +96,12 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
         if (streamingRef.current) return false;
         streamingRef.current = true;
         setStreaming(true);
+        const session = sessionRef.current;
 
         const { editor: ed, title: articleTitle, provider: prov, model: mdl } = live.current;
         const captured = captureEditorContext(ed);
         let text = "";
-        try { text = editorAvailable(ed) ? ed.getText() : ""; } catch { /* editor torn down — title only */ }
+        try { text = editorAvailable(ed) ? articleText(ed) : ""; } catch { /* editor torn down — title only */ }
 
         const replyId = newId();
         setMessages(list => [...list, ...newMessages, { id: replyId, role: "assistant", content: "", status: "streaming" }]);
@@ -126,11 +131,12 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
             onProposal: (p) => patch(replyId, () => ({
                 note: null,
                 // `range` is client-only: where "cursor"/"selection" pointed when the author asked.
-                proposal: { id: p.toolCallId, operation: p.operation, target: p.target, content: p.content, range: captured.range },
+                proposal: { id: p.toolCallId, operation: p.operation, target: p.target, ...(p.edits ? { edits: p.edits } : { content: p.content }), range: captured.range },
                 proposalState: { status: "pending" },
             })),
         });
 
+        if (session !== sessionRef.current) return false; // reset/unmounted meanwhile (reset already cleared the flags)
         abortRef.current = null;
         streamingRef.current = false;
         setStreaming(false);
@@ -168,9 +174,15 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
         const proposal = msg?.proposal;
         if (!proposal || handledRef.current.has(proposal.id) || streamingRef.current) return;
         handledRef.current.add(proposal.id);
+        const session = sessionRef.current;
         patch(messageId, () => ({ proposalState: { status: "checking" } }));
 
-        const checked = await checkProposal({ operation: proposal.operation, target: proposal.target, content: html });
+        // Text fixes: `html` is the reviewed fix list [{ find, replace, enabled }]; only enabled ones are checked.
+        const checked = await checkProposal(proposal.operation === "edit"
+            ? { operation: "edit", target: proposal.target, edits: html.filter(f => f.enabled).map(({ find, replace }) => ({ find, replace })) }
+            : { operation: proposal.operation, target: proposal.target, content: html });
+        // The chat was reset or the editor closed while the check ran: this approval is void.
+        if (session !== sessionRef.current) return;
         if (!checked.ok) {
             // Not applied and not final: the author can edit and try again, or cancel.
             handledRef.current.delete(proposal.id);
@@ -180,20 +192,26 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
 
         const ed = live.current.editor;
         const outcome = editorAvailable(ed)
-            ? applyToEditor(ed, proposal, proposal.range, checked.content)
+            ? applyToEditor(ed, proposal, proposal.operation === "edit" ? html : checked.content)
             : { ok: false, message: "The article editor isn't available, so the change wasn't applied." };
         patch(messageId, () => ({ proposalState: { status: outcome.ok ? "applied" : "failed", error: outcome.ok ? null : outcome.message } }));
         if (outcome.ok) toast.success("Change applied to your article");
         await runTurn([toolMessage(msg, { status: outcome.ok ? "applied" : "failed", message: outcome.message, ...(outcome.ok ? { edited } : {}) })]);
     };
 
-    /** The author discarded the proposal. The article is untouched; the outcome joins the history. */
+    /**
+     * The author discarded the proposal. The article is untouched; the outcome joins the history —
+     * as "failed" (with the reason) when it couldn't even be shown in the article.
+     */
     const cancel = (messageId) => {
         const msg = messagesRef.current.find(m => m.id === messageId);
         if (!msg?.proposal || handledRef.current.has(msg.proposal.id)) return;
         handledRef.current.add(msg.proposal.id);
-        patch(messageId, () => ({ proposalState: { status: "cancelled" } }));
-        setMessages(list => [...list, toolMessage(msg, { status: "cancelled", message: "The author cancelled this change." })]);
+        const { unavailable, error } = msg.proposalState || {};
+        patch(messageId, () => ({ proposalState: unavailable ? { status: "failed", error } : { status: "cancelled" } }));
+        setMessages(list => [...list, toolMessage(msg, unavailable
+            ? { status: "failed", message: error }
+            : { status: "cancelled", message: "The author cancelled this change." })]);
     };
 
     /** Re-run a failed reply (the turn before it is unchanged). */
@@ -205,13 +223,22 @@ export const useAiConversation = ({ editor, title, provider, model }) => {
 
     const stop = () => abortRef.current?.abort();
 
+    /** The proposal can't be shown in the article (e.g. its section is gone): keep it reviewable-but-unappliable. */
+    const markUnavailable = useCallback((messageId, error) => {
+        patch(messageId, (m) => (m.proposalState?.status === "pending" ? { proposalState: { status: "pending", error, unavailable: true } } : {}));
+    }, [patch]);
+
     const reset = () => {
+        sessionRef.current += 1;
         abortRef.current?.abort();
+        abortRef.current = null;
+        streamingRef.current = false;
+        setStreaming(false);
         setMessages([]);
         contextRef.current = null;
         setContextState(null);
         handledRef.current = new Set();
     };
 
-    return { messages, context, streaming, send, approve, cancel, retry, stop, reset };
+    return { messages, context, streaming, send, approve, cancel, retry, stop, reset, markUnavailable };
 };

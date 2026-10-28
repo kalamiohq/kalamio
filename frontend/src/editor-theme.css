@@ -1579,3 +1579,36 @@
     margin: 0 2px;
   }
 }
+
+/* ── AI assistant: inline review of a proposed change (extensions/AiSuggestion) ──
+   Red = what the change would remove (text struck through; images/tables/embeds outlined, since a
+   text-only preview would hide them). Green = the proposed content, editable in place. Colours come
+   from the theme tokens, so both light and dark themes work. */
+.tiptap-content .ai-suggestion-remove {
+  background: rgb(var(--c-red) / 0.14);
+  text-decoration: line-through;
+  text-decoration-color: rgb(var(--c-red) / 0.8);
+}
+.tiptap-content .ai-suggestion-remove-node {
+  outline: 2px dashed rgb(var(--c-red));
+  outline-offset: 3px;
+  opacity: 0.6;
+}
+.ai-suggestion-widget {
+  display: block;
+  margin: 0.75em 0;
+  white-space: normal;
+  cursor: auto;
+}
+.ai-suggestion-insert {
+  background: rgb(var(--c-success) / 0.12);
+  border-left: 3px solid rgb(var(--c-success));
+}
+/* A text fix's correction, shown inline right after the struck-through original. */
+.tiptap-content .ai-suggestion-insert-inline {
+  background: rgb(var(--c-success) / 0.16);
+  color: rgb(var(--c-success));
+  border-radius: 3px;
+  padding: 0 2px;
+  margin-left: 2px;
+}

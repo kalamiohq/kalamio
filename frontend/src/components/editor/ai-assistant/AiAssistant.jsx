@@ -1,26 +1,30 @@
 import { useContext, useEffect, useId, useRef, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import toast from "react-hot-toast";
 import { EditorContext } from "../../../pages/editor.pages";
 import Icon from "../../Icon";
 import Loader from "../../loader.component";
 import AiProviderForm, { FIELD_CLASS } from "./AiProviderForm";
 import AiSettings from "./AiSettings";
-import AiProposalCard from "./AiProposalCard";
+import AiInlineSuggestion from "./AiInlineSuggestion";
+import AiFixesInChat from "./AiFixesInChat";
 import { useAiConversation } from "./useAiConversation";
+import { useLauncherNudges } from "./useLauncherNudges";
 import { useAiSettings } from "../../../hooks/queries/useAiSettings";
 import { useUpdateAiProvider, aiErrorMessage } from "../../../hooks/mutations/useAiSettingsMutations";
-import { resolveTarget } from "../../../common/ai-editor";
+import { describeTarget } from "../../../common/ai-editor";
 
 const TOOLTIP = "AI-powered writing and research assistance";
 const SUGGESTIONS = ["Suggest a stronger title", "Tighten my introduction", "Write a closing paragraph for my article"];
 const MESSAGE_CHARS = 8000; // mirrors server AI_LIMITS.messageChars
+const OPERATION_LABEL = { insert: "Insert", append: "Append", replace: "Replace", edit: "Fix text" };
 
 /**
  * Kalamio AI Assistant — a floating launcher plus a right-hand sidebar on the article editor.
  * Provider keys live (encrypted) on the server; every request goes through POST /ai/chat, which
  * compacts older context, applies guardrails and streams the reply back as SSE (see common/ai-chat.js).
- * Article edits arrive as proposals the author must review and approve (AiProposalCard).
+ * Article edits arrive as proposals reviewed INSIDE the article (AiInlineSuggestion): green =
+ * proposed (editable), red = would be removed, applied only on "Apply Changes".
  *
  * Desktop (lg+): the sidebar docks below the navbar and the editor shifts left to stay visible
  * (BlogEditor applies the margin). Smaller screens: it opens as a full-screen sheet.
@@ -46,14 +50,25 @@ const AiAssistant = ({ open, onOpenChange }) => {
         wasOpen.current = open;
     }, [open]);
 
+    // A random prompt pops up beside the launcher now and then while the panel is closed.
+    const { nudge, dismiss: dismissNudges } = useLauncherNudges(open);
+
     const catalog = settings?.catalog || [];
     const connected = catalog.filter(p => settings.providers.some(s => s.provider === p.id));
     const activeSaved = settings?.providers.find(s => s.provider === settings.active_provider);
     const activeProvider = activeSaved && catalog.find(p => p.id === activeSaved.provider);
 
-    const { messages, context, streaming, send, approve, cancel, retry, stop, reset } = useAiConversation({
+    const { messages, context, streaming, send, approve, cancel, retry, stop, reset, markUnavailable } = useAiConversation({
         editor: textEditor, title: blog?.title, provider: activeSaved?.provider, model: activeSaved?.model,
     });
+    // At most one proposal awaits review at a time (a new message supersedes it).
+    const reviewing = messages.find(m => m.proposal && ["pending", "checking"].includes(m.proposalState?.status) && !m.proposalState.unavailable);
+
+    // "Show in article": on phones the panel covers the editor, so close it first.
+    const showInArticle = (proposalId) => {
+        if (window.innerWidth < 1024) onOpenChange(false);
+        requestAnimationFrame(() => document.getElementById(`ai-suggestion-${proposalId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
+    };
 
     // Keep the newest text in view while a reply streams in.
     useEffect(() => {
@@ -155,17 +170,52 @@ const AiAssistant = ({ open, onOpenChange }) => {
                                     <Icon name="info" className="text-sm mt-px" />{m.notice}
                                 </p>
                             )}
-                            {m.proposal && (
-                                <AiProposalCard
-                                    proposal={m.proposal}
-                                    state={m.proposalState}
-                                    resolved={["pending", "checking"].includes(m.proposalState.status)
-                                        ? resolveTarget(textEditor, m.proposal, m.proposal.range)
-                                        : { ok: true }}
+                            {m.proposal?.operation === "edit" && !m.proposalState.unavailable && ["pending", "checking"].includes(m.proposalState.status) ? (
+                                // Text fixes are reviewed and approved right here; the article only highlights them.
+                                <AiFixesInChat
+                                    editor={textEditor}
+                                    message={m}
                                     busy={streaming}
-                                    onApply={(html, edited) => approve(m.id, html, edited)}
-                                    onCancel={() => cancel(m.id)}
+                                    onApply={approve}
+                                    onCancel={cancel}
+                                    onJump={() => { if (window.innerWidth < 1024) onOpenChange(false); }}
                                 />
+                            ) : m.proposal && (
+                                // Content changes are reviewed in the article (AiInlineSuggestion); this is their summary.
+                                <div className="flex flex-col gap-1.5 rounded-radius-md border border-border bg-surface p-3 text-sm">
+                                    <span className="flex items-center gap-1.5 font-semibold text-black">
+                                        <Icon name="edit_note" className="text-base" />
+                                        Suggested change: {m.proposal.target.type === "entire_article" ? "Replace entire draft" : OPERATION_LABEL[m.proposal.operation]}
+                                    </span>
+                                    <span className="text-dark-grey">{describeTarget(m.proposal.target)}</span>
+                                    {m.proposalState.unavailable ? (
+                                        <>
+                                            <span role="alert" className="flex items-start gap-1.5 text-red">
+                                                <Icon name="error" className="text-sm mt-px" />{m.proposalState.error}
+                                            </span>
+                                            <button type="button" onClick={() => cancel(m.id)} className="self-start rounded-full bg-grey px-3 py-1 font-medium text-black hover:bg-border">
+                                                Dismiss
+                                            </button>
+                                        </>
+                                    ) : ["pending", "checking"].includes(m.proposalState.status) ? (
+                                        <>
+                                            <span className="text-dark-grey">
+                                                Review it in your article: the suggestion is <span className="font-medium text-success">green</span>
+                                                {["replace", "edit"].includes(m.proposal.operation) ? <>, and what it replaces is <span className="font-medium text-red">red</span></> : null}.
+                                            </span>
+                                            <button type="button" onClick={() => showInArticle(m.proposal.id)}
+                                                className="self-start flex items-center gap-1 rounded-full border border-border px-3 py-1 font-medium text-black hover:bg-grey">
+                                                <Icon name="visibility" className="text-sm" /> Show in article
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <span className={`flex items-center gap-1.5 ${m.proposalState.status === "applied" ? "text-success" : "text-dark-grey"}`}>
+                                            <Icon name={m.proposalState.status === "applied" ? "check_circle" : m.proposalState.status === "failed" ? "error" : "close"} className="text-sm" />
+                                            {m.proposalState.status === "applied" ? "Applied to your article."
+                                                : m.proposalState.status === "failed" ? `Not applied: ${m.proposalState.error}` : "Cancelled. Your article wasn't changed."}
+                                        </span>
+                                    )}
+                                </div>
                             )}
                             <div className="flex gap-1">
                                 {m.status === "done" && m.content && (
@@ -199,6 +249,19 @@ const AiAssistant = ({ open, onOpenChange }) => {
 
     return (
         <>
+            {/* The proposal under review lives in the article, not the panel — it stays visible when the panel closes. */}
+            {reviewing && (
+                <AiInlineSuggestion
+                    key={reviewing.proposal.id}
+                    editor={textEditor}
+                    message={reviewing}
+                    busy={streaming}
+                    onApply={approve}
+                    onCancel={cancel}
+                    onUnavailable={markUnavailable}
+                />
+            )}
+
             {/* Launcher. Own tooltip (not CustomTooltip): that one renders below/centred and would fall
                 off-screen for a bottom-right button. */}
             <div className={`fixed bottom-6 right-6 z-40 group ${open ? "hidden" : ""}`}>
@@ -212,15 +275,35 @@ const AiAssistant = ({ open, onOpenChange }) => {
                     aria-expanded={open}
                     aria-controls={`${uid}-panel`}
                 >
-                    <Icon name="auto_awesome" className="text-2xl" />
+                    <Icon name="smart_toy" className="text-2xl" />
                 </button>
                 <span
                     id={`${uid}-tip`}
                     role="tooltip"
-                    className="pointer-events-none absolute right-full top-1/2 mr-3 -translate-y-1/2 whitespace-nowrap rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    className={`pointer-events-none absolute right-full top-1/2 mr-3 -translate-y-1/2 whitespace-nowrap rounded-full bg-black px-3 py-1.5 text-sm font-medium text-white opacity-0 shadow-md transition-opacity ${nudge ? "" : "group-hover:opacity-100 group-focus-within:opacity-100"}`}
                 >
                     {TOOLTIP}
                 </span>
+                <AnimatePresence>
+                    {nudge && (
+                        <motion.div
+                            key={nudge}
+                            initial={reduceMotion ? false : { opacity: 0, x: 8, scale: 0.96 }}
+                            animate={{ opacity: 1, x: 0, scale: 1 }}
+                            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 8 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute right-full bottom-1 mr-3 flex items-center gap-1 rounded-radius-lg rounded-br-sm bg-white border border-border shadow-lg pl-3 pr-1 py-1"
+                        >
+                            <button type="button" onClick={() => onOpenChange(true)} className="whitespace-nowrap py-1 text-sm font-medium text-black hover:underline">
+                                {nudge}
+                            </button>
+                            <button type="button" onClick={dismissNudges} aria-label="Dismiss AI assistant tips"
+                                className="w-7 h-7 flex items-center justify-center rounded-full text-dark-grey hover:text-black hover:bg-grey">
+                                <Icon name="close" className="text-sm" />
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             {open && (
@@ -242,7 +325,7 @@ const AiAssistant = ({ open, onOpenChange }) => {
                             </button>
                         ) : (
                             <span className="w-8 h-8 flex items-center justify-center rounded-full bg-black text-white">
-                                <Icon name="auto_awesome" className="text-lg" />
+                                <Icon name="smart_toy" className="text-lg" />
                             </span>
                         )}
                         <h2 id={`${uid}-title`} ref={headingRef} tabIndex={-1} className="text-xl font-semibold text-black outline-none">

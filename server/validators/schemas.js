@@ -138,7 +138,7 @@ const aiMessage = z.discriminatedUnion('role', [
         id: messageId,
         role: z.literal('tool'),
         toolCallId: z.string().min(1).max(200),
-        operation: z.enum(['insert', 'append', 'replace']),
+        operation: z.enum(['insert', 'append', 'replace', 'edit']),
         result: z.object({
             status: z.enum(['applied', 'cancelled', 'failed']),
             message: z.string().trim().max(AI_LIMITS.toolResultChars).optional(),

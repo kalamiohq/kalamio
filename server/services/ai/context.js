@@ -39,7 +39,11 @@ const toTranscriptLine = (m) => {
     if (m.role === 'tool') return `Result of the proposed ${m.operation}: ${m.result.status}${m.result.message ? ` (${clip(m.result.message)})` : ''}`;
     const lines = [];
     if (m.content) lines.push(`Assistant: ${clip(m.content)}`);
-    if (m.toolCall) lines.push(`Assistant proposed to ${m.toolCall.operation} at ${describeTarget(m.toolCall.target)}: ${clip(htmlToText(m.toolCall.content))}`);
+    if (m.toolCall?.operation === 'edit') {
+        lines.push(`Assistant proposed ${m.toolCall.edits.length} text fix(es): ${clip(m.toolCall.edits.map(e => `"${e.find}" → "${e.replace}"`).join('; '))}`);
+    } else if (m.toolCall) {
+        lines.push(`Assistant proposed to ${m.toolCall.operation} at ${describeTarget(m.toolCall.target)}: ${clip(htmlToText(m.toolCall.content))}`);
+    }
     return lines.join('\n');
 };
 

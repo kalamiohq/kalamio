@@ -192,3 +192,41 @@ describe('toWireMessages', () => {
     expect(wire[1].toolCall).toEqual({ id: 'c1', operation: 'append', target: { type: 'end' }, content: 'x' })
   })
 })
+
+describe('useAiConversation — reset / unmount during approval', () => {
+  // The server check is held open so the reset/unmount lands while approve() is awaiting it.
+  const holdCheck = () => {
+    let release
+    const gate = new Promise(r => { release = r })
+    checkReply = async (body) => { await gate; return HttpResponse.json({ ok: true, proposal: body.proposal }) }
+    return () => release()
+  }
+
+  it('drops an approval that was in flight when the chat was reset', async () => {
+    const { result } = await getProposal()
+    const release = holdCheck()
+    let approval
+    act(() => { approval = result.current.approve(lastAssistant(result).id, '<p>Late</p>') })
+    await waitFor(() => expect(checkBodies).toHaveLength(1))
+    act(() => result.current.reset())
+    release()
+    await act(() => approval)
+
+    expect(editor.getHTML()).toBe('<h2>Intro</h2><p>Hello.</p>') // never applied
+    expect(chatBodies).toHaveLength(1) // no follow-up request
+    expect(result.current.messages).toEqual([])
+  })
+
+  it('drops an approval that was in flight when the editor closed', async () => {
+    const { result, unmount } = await getProposal()
+    const release = holdCheck()
+    let approval
+    act(() => { approval = result.current.approve(lastAssistant(result).id, '<p>Late</p>') })
+    await waitFor(() => expect(checkBodies).toHaveLength(1))
+    unmount()
+    release()
+    await approval
+    expect(editor.getHTML()).toBe('<h2>Intro</h2><p>Hello.</p>')
+    expect(chatBodies).toHaveLength(1)
+  })
+})
