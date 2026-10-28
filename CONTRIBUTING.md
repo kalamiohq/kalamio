@@ -6,9 +6,10 @@ feedback are all welcome. This guide gets you from zero to a merged pull request
 ## Before you start
 
 - **Read the [Code of Conduct](CODE_OF_CONDUCT.md).** We expect everyone to follow it.
-- **Sign the [CLA](CLA.md).** When you open your first pull request, the CLA Assistant bot
-  comments with a link. Signing takes one click with your GitHub account, and you only do
-  it once. You keep the copyright to your work — the CLA explains exactly what you grant.
+- **Sign the [CLA](CLA.md).** When you open your first pull request, the CLA Assistant check
+  comments on it. To sign, read the CLA and reply on the pull request with
+  `I have read the CLA Document and I hereby sign the CLA`. You only do it once. You keep
+  the copyright to your work — the CLA explains exactly what you grant.
 - **Pick something to work on.** Issues labeled
   [`good first issue`](https://github.com/kalamiohq/kalamio/labels/good%20first%20issue) are
   a great start. Comment on the issue to say you're taking it, so two people don't build the same thing.
@@ -136,7 +137,8 @@ docker-compose.yml local development services
 3. Fill in the pull request template: what changed, why, and how you tested it.
    Add screenshots or a short video for UI changes.
 4. Make sure:
-   - the CLA check is green (sign via the bot's comment if it isn't),
+   - the CLA check (`license/cla`) is green (sign as its comment explains if it isn't,
+     or comment `recheck` to run it again),
    - CI passes (frontend build + tests, server tests),
    - the PR title, CodeQL and dependency review checks pass. Dependency review
      fails if the PR adds a package with a known high-severity vulnerability or
