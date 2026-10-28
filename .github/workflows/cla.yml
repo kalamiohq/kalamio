@@ -1,0 +1,65 @@
+name: CLA
+
+# Checks that everyone who authored a commit in a PR has signed CLA.md, and posts the
+# result as the commit status "license/cla" (a required check on main). Contributors sign
+# by commenting on their PR, and signatures are stored on the cla-signatures branch. The
+# logic is in .github/scripts/cla.sh. This replaces the hosted cla-assistant.io bot,
+# which kept accepting webhooks without ever posting a status.
+#
+# pull_request_target and issue_comment get a write token, also on PRs from forks. That's
+# safe here: the job checks out only .github/scripts from main and never checks out or
+# runs PR code. Comment text and logins reach the script as environment variables, never
+# as ${{ }} expressions inside a run: block. The workflow always runs from main, so edits
+# to it (or to the script) take effect after they're merged.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  issue_comment:
+    types: [created]
+  # Re-check one PR, or every open PR into main when no number is given.
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: PR number (leave empty to check every open PR into main)
+        required: false
+
+# One run per PR at a time, so a new signature and a status update can't interleave.
+concurrency:
+  group: cla-${{ github.event.pull_request.number || github.event.issue.number || inputs.pr || 'all' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write      # add signatures to signatures/version1/cla.json on cla-signatures
+  pull-requests: write # the "please sign" / "thank you" comment
+  statuses: write      # the license/cla commit status
+
+jobs:
+  cla:
+    name: CLA Assistant
+    # Comments only matter on PRs, and only when they're a signature or "recheck".
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request &&
+        (contains(github.event.comment.body, 'sign the CLA') || contains(github.event.comment.body, 'recheck')))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the CLA script from main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Check signatures
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number || github.event.issue.number || inputs.pr }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          COMMENT_USER_ID: ${{ github.event.comment.user.id }}
+          COMMENT_CREATED_AT: ${{ github.event.comment.created_at }}
+        run: bash .github/scripts/cla.sh

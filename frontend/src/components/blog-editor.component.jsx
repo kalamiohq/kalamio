@@ -20,6 +20,7 @@ import { getDay } from "../common/date";
 import ImageCropperModal from "./image-cropper.component";
 import PublishSteps from "./publish-steps.component";
 import PreviewButton from "./preview/PreviewButton";
+import AiAssistant from "./editor/ai-assistant/AiAssistant";
 
 // The article banner displays 2:1 on desktop (aspect-[2/1], object-cover), so crop to that ratio.
 const ARTICLE_BANNER_ASPECT = 2;
@@ -59,6 +60,7 @@ const BlogEditor = () => {
     const [draftMenuOpen, setDraftMenuOpen] = useState(null);
     const [showDraftPopup, setShowDraftPopup] = useState(null); // 'save' | 'update' | null
     const [confirmState, setConfirmState] = useState(null); // { title, message, confirmLabel, onConfirm } | null
+    const [aiOpen, setAiOpen] = useState(false);
     const searchTimeoutRef = useRef(null);
     const titleRef = useRef(null);
 
@@ -611,6 +613,9 @@ const BlogEditor = () => {
                 </div>
             )}
 
+            {/* On desktop the AI sidebar docks on the right (380px); shift the article over so it stays
+                fully visible alongside it. Smaller screens get a full-screen sheet instead. */}
+            <div className={`transition-[margin] duration-200 ${aiOpen ? "lg:mr-[380px]" : ""}`}>
             <AnimationWrapper>
                 <section>
                     <div className="mx-auto max-w-[783px] w-full">
@@ -681,6 +686,9 @@ const BlogEditor = () => {
                     </div>
                 </section>
             </AnimationWrapper>
+            </div>
+
+            <AiAssistant open={aiOpen} onOpenChange={setAiOpen} />
 
             {bannerToCrop && (
                 <ImageCropperModal

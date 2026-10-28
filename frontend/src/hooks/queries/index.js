@@ -28,3 +28,4 @@ export { default as useBlockedUsers } from './useBlockedUsers';
 export { usePollVoteStatus } from './usePollVoteStatus';
 export { usePollVoters } from './usePollVoters';
 export { useAnalytics } from './useAnalytics';
+export { useAiSettings } from './useAiSettings';

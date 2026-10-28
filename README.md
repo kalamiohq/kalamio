@@ -160,7 +160,7 @@ We'd love your help, whether it's a bug fix, a new feature, documentation or des
 1. Read the [contributing guide](CONTRIBUTING.md) and our [code of conduct](CODE_OF_CONDUCT.md).
 2. Pick an issue: [`good first issue`](https://github.com/kalamiohq/kalamio/labels/good%20first%20issue)
    is a great place to start.
-3. Open a pull request. On your first one, you'll be asked to sign our [CLA](CLA.md) with a single click.
+3. Open a pull request. On your first one, you'll be asked to sign our [CLA](CLA.md) with a one-line comment.
 
 ## Security
 

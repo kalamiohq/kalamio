@@ -20,6 +20,7 @@ import ImageWithCaption from './ImageWithCaption';
 import FileAttachment from './FileAttachment';
 import CodeBlockWithLanguage from './CodeBlockWithLanguage';
 import EmbedNode from './EmbedNode';
+import AiSuggestion from './AiSuggestion';
 
 /**
  * getExtensions — Assembles and returns every Tiptap extension used by
@@ -85,6 +86,9 @@ export function getExtensions({ mentionSuggestion } = {}) {
 
     // ── File attachments ────────────────────────────────────────────────
     FileAttachment,
+
+    // ── AI assistant: inline review of a proposed change (decorations only) ──
+    AiSuggestion,
 
     // ── Code blocks ─────────────────────────────────────────────────────
     CodeBlockWithLanguage.configure({

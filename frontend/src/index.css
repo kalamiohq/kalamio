@@ -383,7 +383,9 @@
        `:where()` contributes zero, so the specificity here is byte-for-byte what it was. */
     #textEditor *:where(:not(pre, code, pre *, code *)),
     .blog-page-content *:where(:not(pre, code, pre *, code *)),
-    .tiptap-content *:where(:not(pre, code, pre *, code *)),
+    /* .ai-suggestion-chrome = the AI suggestion card's labels/buttons, which sit inside the editor but
+       are UI, not article text (its green suggested content keeps the article typography). */
+    .tiptap-content *:where(:not(pre, code, pre *, code *, .ai-suggestion-chrome, .ai-suggestion-chrome *)),
     .tiptap-content {
         font-family: 'Literata', 'Merriweather', Charter, Georgia, Cambria, serif !important;
         font-weight: 400;

@@ -25,14 +25,14 @@ import {
   Mail, Key, LockOpen, Bold, Italic, Underline, Strikethrough, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, Minus, Highlighter, Redo2, Undo2, Table, Terminal, Paperclip,
   Save, ChevronLeft, ChevronRight,
-  Smartphone, Tablet, Laptop,
+  Smartphone, Tablet, Laptop, Bot,
 } from 'lucide-react';
 
 // Material Symbols name → lucide-react component. Covers every name used across the app
 // (static <Icon name="…">, conditional names, and data-driven chip/registry icons).
 const ICONS = {
   add: Plus, add_a_photo: Camera, add_link: Link, add_photo_alternate: ImagePlus,
-  alternate_email: AtSign, analytics: ChartColumn, arrow_back: ArrowLeft, article: FileText,
+  alternate_email: AtSign, analytics: ChartColumn, smart_toy: Bot, arrow_back: ArrowLeft, article: FileText,
   auto_stories: BookOpen, ballot: ListChecks, bar_chart: ChartColumn, block: Ban,
   bookmark: Bookmark, bookmark_border: Bookmark, business: Building2, calendar_month: Calendar,
   call_made: ArrowUpRight, call_received: ArrowDownLeft, chat: MessageSquare, chat_bubble: MessageCircle,
