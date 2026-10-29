@@ -1,9 +1,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import mongoose from 'mongoose';
-import Post from './Schema/Post.js';
-import User from './Schema/User.js';
-import Publication from './Schema/Publication.js';
+import Post from '../Schema/Post.js';
+import User from '../Schema/User.js';
+import Publication from '../Schema/Publication.js';
 
 mongoose.connect(process.env.DB_LOCATION, { autoIndex: true }).then(async () => {
     console.log('Connected to DB');
