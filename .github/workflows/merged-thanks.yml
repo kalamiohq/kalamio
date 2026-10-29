@@ -1,0 +1,44 @@
+name: Thank contributors
+
+# When an outside contributor's pull request is merged, comments with a thank-you and
+# ready-made LinkedIn and X share links that tag Kalamio and Harish. The logic is in
+# .github/scripts/merged-thanks.sh.
+#
+# pull_request_target gets a token that can comment on PRs from forks. That's safe here: the
+# job checks out only .github/scripts from main and never checks out or runs PR code, and the
+# script reads the PR's title and author through the API, never as ${{ }} expressions inside
+# a run: block. The workflow always runs from main, so edits take effect after they're merged.
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+  # Thank one already-merged PR by hand (for example, merges from before this workflow existed).
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Number of a merged PR
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write # the thank-you comment
+
+jobs:
+  thanks:
+    name: Thank the contributor
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the script from main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
+      - name: Comment on the merged PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
+        run: bash .github/scripts/merged-thanks.sh

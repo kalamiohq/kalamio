@@ -149,6 +149,21 @@ docker-compose.yml local development services
    reply to it in the PR. Its comments are suggestions, not requirements.
 6. A maintainer will review it. We may ask for changes — that's a normal part of the process.
 
+## Share your contribution
+
+Got a pull request merged? That's worth celebrating. When it's merged, a comment on your PR
+gives you ready-made share links and a suggested post. Post about it on LinkedIn or X and tag
+us, and we'll like and reshare it:
+
+| | Tag |
+|---|---|
+| **LinkedIn** | [Harish Sehlangia](https://linkedin.com/in/harishsehlangia) and the [Kalamio page](https://www.linkedin.com/company/kalamio) |
+| **X** | [@harishsehlangia](https://x.com/harishsehlangia) and [@kalamiohq](https://x.com/kalamiohq) |
+
+On LinkedIn, type `@` and pick the name from the list, or it won't become a tag. Add
+`#KalamioContributor` so we can find your post even if the tag doesn't stick.
+
 ## Questions?
 
-Open an issue and we'll help. Thanks for helping build Kalamio!
+Ask in [GitHub Discussions](https://github.com/kalamiohq/kalamio/discussions), chat with us on
+[Discord](https://kalamio.com/discord), or open an issue. Thanks for helping build Kalamio!

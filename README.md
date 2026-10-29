@@ -162,6 +162,16 @@ We'd love your help, whether it's a bug fix, a new feature, documentation or des
    is a great place to start.
 3. Open a pull request. On your first one, you'll be asked to sign our [CLA](CLA.md) with a one-line comment.
 
+Got a pull request merged? Share it on LinkedIn or X and tag us. We like and reshare every
+contribution post. See [Share your contribution](CONTRIBUTING.md#share-your-contribution).
+
+## Community
+
+- **Discord:** chat with contributors at [kalamio.com/discord](https://kalamio.com/discord)
+- **GitHub Discussions:** questions and ideas in [Discussions](https://github.com/kalamiohq/kalamio/discussions)
+- **LinkedIn:** follow [Kalamio](https://www.linkedin.com/company/kalamio), and its founder [Harish Sehlangia](https://linkedin.com/in/harishsehlangia)
+- **X:** [@kalamiohq](https://x.com/kalamiohq), and [@harishsehlangia](https://x.com/harishsehlangia)
+
 ## Security
 
 Please report security vulnerabilities privately, never in public issues.
