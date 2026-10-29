@@ -3,8 +3,10 @@
 #
 # Everyone who authored a commit in a PR must have signed CLA.md. Signatures live in
 # signatures/version1/cla.json on the cla-signatures branch, and only this script writes
-# them. A contributor signs by commenting SIGN_PHRASE on their PR. The result is posted
-# as the commit status "license/cla", which is a required check on main.
+# them. A contributor signs by commenting SIGN_PHRASE on their PR. Each signature records
+# cla_commit, the commit that last changed CLA.md on main before they commented, so we know
+# which text they agreed to. The result is posted as the commit status "license/cla", which
+# is a required check on main.
 #
 # It never checks out or runs PR code: everything goes through the GitHub API.
 #
@@ -134,7 +136,7 @@ Comment \`recheck\` to run this check again."
 
 # Record the commenter's signature (they must have authored a commit in the PR), then re-check.
 sign() {
-    local pr=$1 commits entry attempt content
+    local pr=$1 commits cla_commit entry attempt content
     if signed "$COMMENT_USER_ID"; then
         echo "$COMMENT_USER has already signed."
         check "$pr"
@@ -146,9 +148,16 @@ sign() {
         check "$pr"
         return
     fi
+    # The CLA.md they read: the last commit on main to change it before their comment. A
+    # signature without it couldn't show which text was agreed to, so stop instead.
+    cla_commit=$(gh api "repos/$REPO/commits?sha=main&path=CLA.md&until=$COMMENT_CREATED_AT&per_page=1" --jq '.[0].sha // empty')
+    if [ -z "$cla_commit" ]; then
+        echo "::error::Couldn't find the CLA.md commit on main, so $COMMENT_USER's signature wasn't recorded."
+        exit 1
+    fi
     entry=$(jq -n --arg name "$COMMENT_USER" --argjson id "$COMMENT_USER_ID" --argjson comment_id "$COMMENT_ID" \
-        --arg created_at "$COMMENT_CREATED_AT" --argjson pr "$pr" \
-        '{name: $name, id: $id, comment_id: $comment_id, created_at: $created_at, pull_request: $pr}')
+        --arg created_at "$COMMENT_CREATED_AT" --argjson pr "$pr" --arg cla_commit "$cla_commit" \
+        '{name: $name, id: $id, comment_id: $comment_id, created_at: $created_at, pull_request: $pr, cla_commit: $cla_commit}')
     # Two people can sign at the same moment on different PRs: if the file changed since we
     # read it, GitHub rejects the stale sha, so re-read and try again.
     for attempt in 1 2 3 4 5; do
