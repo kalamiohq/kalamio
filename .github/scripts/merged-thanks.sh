@@ -11,6 +11,7 @@
 # Env: GH_TOKEN, REPO (owner/name), PR (a number). DRY_RUN=1 prints the comment instead of
 # posting it.
 set -euo pipefail
+export LC_ALL=C.UTF-8 # so ${#s} and ${s:i:1} count characters, not bytes
 
 MARKER='<!-- kalamio-merged-thanks -->'
 # No thank-you for the maintainers themselves, or for bots (any login ending in "[bot]").
@@ -23,6 +24,30 @@ HASHTAGS='#opensource #KalamioContributor'
 DISCORD='https://kalamio.com/discord'
 
 uri() { jq -rn --arg s "$1" '$s | @uri'; }
+
+# Cut $1 to at most $2 characters as X counts them: most characters count as one, but CJK
+# characters, emoji and others outside the ranges below count as two
+# (https://docs.x.com/fundamentals/counting-characters). Adds "..." when it cuts.
+x_truncate() {
+    local s=$1 limit=$2 i c cp total=0 w=0 out=''
+    local -a chars=() weights=()
+    for ((i = 0; i < ${#s}; i++)); do
+        c=${s:i:1}; cp=$(printf '%d' "'$c"); chars+=("$c")
+        if (( cp <= 0x10FF || (cp >= 0x2000 && cp <= 0x200D) || (cp >= 0x2010 && cp <= 0x201F) || (cp >= 0x2032 && cp <= 0x2037) )); then
+            weights+=(1)
+        else
+            weights+=(2)
+        fi
+        total=$(( total + weights[i] ))
+    done
+    if (( total <= limit )); then echo "$s"; return; fi
+    # Too long: keep as many characters as fit alongside the "...".
+    for ((i = 0; i < ${#chars[@]}; i++)); do
+        (( w + weights[i] > limit - 3 )) && break
+        out+=${chars[i]}; w=$(( w + weights[i] ))
+    done
+    echo "$out..."
+}
 
 pr_json=$(gh api "repos/$REPO/pulls/$PR")
 author=$(jq -r .user.login <<<"$pr_json")
@@ -50,8 +75,7 @@ merged=$(gh api --paginate "repos/$REPO/pulls?state=closed&per_page=100" \
 # backticks (they'd break the code block), and short enough for a 280-character X post.
 title=$(jq -r .title <<<"$pr_json" | tr -d '`\r' | tr '\n' ' ' \
     | sed -E 's/^[a-z]+(\([^)]*\))?!?:[[:space:]]*//; s/^[[:space:]]+|[[:space:]]+$//g')
-title="${title^}"
-if [ "${#title}" -gt 90 ]; then title="${title:0:87}..."; fi
+title=$(x_truncate "${title^}" 90)
 
 if [ "$merged" -le 1 ]; then
     welcome="This is your first contribution to Kalamio. Welcome aboard!"
