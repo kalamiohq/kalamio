@@ -1,0 +1,21 @@
+# How GitHub groups auto-generated release notes: the "Generate release notes" button, and
+# .github/workflows/release-notes.yml, which fills in releases published without notes.
+# Each merged PR goes into the first category whose labels it has. The "type: …" labels come
+# from the PR title (.github/workflows/pr-labels.yml). GitHub also adds a "New Contributors"
+# section that @mentions everyone whose first PR is in the release.
+changelog:
+  exclude:
+    labels: [invalid, duplicate, wontfix]
+  categories:
+    - title: Features
+      labels: ["type: feature", enhancement]
+    - title: Bug fixes
+      labels: ["type: bug", bug]
+    - title: Documentation
+      labels: ["type: docs", documentation]
+    - title: Dependency updates
+      labels: [dependencies]
+    - title: Maintenance
+      labels: ["type: refactor", "type: test", "type: chore"]
+    - title: Other changes
+      labels: ["*"]

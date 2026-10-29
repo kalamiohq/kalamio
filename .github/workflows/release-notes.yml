@@ -1,0 +1,40 @@
+name: Release notes
+
+# Fills in a release's notes when it's published without any, using GitHub's generated notes:
+# every merged PR since the previous release, grouped as in .github/release.yml, plus a
+# "New Contributors" section that @mentions everyone whose first PR is in it. Releases
+# published with notes are left alone. Run it by hand to fill in an older release.
+#
+# Only release events and maintainers start it, and it runs no repository code.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of a release whose notes are empty
+        required: true
+
+permissions:
+  contents: write # edit the release notes
+
+jobs:
+  notes:
+    name: Fill in empty release notes
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate notes if the release has none
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          release=$(gh api "repos/$REPO/releases/tags/$TAG")
+          if [ -n "$(jq -r '.body // empty' <<<"$release")" ]; then
+            echo "$TAG already has release notes, leaving them alone."
+            exit 0
+          fi
+          # Without previous_tag_name, GitHub compares against the previous release.
+          notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" -f tag_name="$TAG" --jq .body)
+          gh api -X PATCH "repos/$REPO/releases/$(jq -r .id <<<"$release")" -f body="$notes" --silent
+          echo "Filled in the release notes for $TAG."
