@@ -1,17 +1,20 @@
 import { useEffect, useRef } from "react";
 
-// Thin horizontal reading-progress indicator. It measures the target article container, not the
-// whole document, so comments/footer below the article don't count toward progress. The fill is
-// updated through the DOM (not React state) to keep scroll handling cheap.
+const TICK_COUNT = 15;
+
+// Vertical reading-progress indicator: a column of short ticks near the right edge, with the tick
+// for the reader's current position drawn dark. It measures the target article container, not the
+// whole document, so comments/footer below the article don't count toward progress. Updates go
+// through the DOM (not React state) to keep scroll handling cheap.
 const ReadingProgress = ({ targetRef, resetKey }) => {
-    const barRef = useRef(null);
-    const fillRef = useRef(null);
+    const indicatorRef = useRef(null);
+    const tickRefs = useRef([]);
 
     useEffect(() => {
         const target = targetRef.current;
-        const bar = barRef.current;
-        const fill = fillRef.current;
-        if (!target || !bar || !fill) return;
+        const indicator = indicatorRef.current;
+        const ticks = tickRefs.current.filter(Boolean);
+        if (!target || !indicator || ticks.length === 0) return;
 
         let frame = 0;
 
@@ -22,20 +25,28 @@ const ReadingProgress = ({ targetRef, resetKey }) => {
                 window.innerHeight || document.documentElement.clientHeight || 0;
             const scrollable = rect.height - viewportHeight;
 
-            let progress;
-            if (scrollable > 0) {
-                // Article top at the viewport top = 0%; article bottom at the viewport bottom = 100%.
-                progress = (-rect.top / scrollable) * 100;
-            } else {
-                // A short article fits entirely on screen: it's fully readable at once.
-                progress =
-                    rect.top < viewportHeight && rect.bottom > 0 ? 100 : 0;
+            // The whole article fits on screen, so there is no position to track.
+            if (scrollable <= 0) {
+                indicator.hidden = true;
+                return;
             }
 
-            progress = Math.min(100, Math.max(0, progress));
+            // Article top at the viewport top = 0%; article bottom at the viewport bottom = 100%.
+            const progress = Math.min(
+                100,
+                Math.max(0, (-rect.top / scrollable) * 100)
+            );
 
-            fill.style.transform = `scaleX(${progress / 100})`;
-            bar.setAttribute("aria-valuenow", String(Math.round(progress)));
+            indicator.hidden = false;
+            indicator.setAttribute("aria-valuenow", String(Math.round(progress)));
+
+            const active = Math.round((progress / 100) * (ticks.length - 1));
+            ticks.forEach((tick, index) => {
+                const isActive = index === active;
+                tick.classList.toggle("bg-black", isActive);
+                tick.classList.toggle("bg-border", !isActive);
+                tick.setAttribute("data-active", String(isActive));
+            });
         };
 
         const schedule = () => {
@@ -72,19 +83,28 @@ const ReadingProgress = ({ targetRef, resetKey }) => {
 
     return (
         <div
-            ref={barRef}
+            ref={indicatorRef}
             role="progressbar"
             aria-label="Reading progress"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={0}
-            className="fixed top-0 left-0 right-0 z-50 h-[3px] bg-border pointer-events-none"
+            className="fixed top-1/2 right-2 z-50 flex -translate-y-1/2 flex-col items-end gap-[7px] pointer-events-none sm:right-8"
+            hidden
         >
-            <div
-                ref={fillRef}
-                className="h-full w-full origin-left bg-kalamio transition-transform duration-100 ease-out will-change-transform"
-                style={{ transform: "scaleX(0)" }}
-            />
+            {Array.from({ length: TICK_COUNT }, (_, index) => (
+                <span
+                    key={index}
+                    ref={(node) => {
+                        tickRefs.current[index] = node;
+                    }}
+                    aria-hidden="true"
+                    data-active={index === 0 ? "true" : "false"}
+                    className={`h-[2px] w-4 rounded-full transition-colors duration-150 ${
+                        index === 0 ? "bg-black" : "bg-border"
+                    }`}
+                />
+            ))}
         </div>
     );
 };
