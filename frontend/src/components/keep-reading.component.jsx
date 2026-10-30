@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import Icon from "./Icon";
 import { cdnUrl } from "../common/cdn";
 
-const STORAGE_KEY = "notelys_keep_reading";
+const STORAGE_KEY = "kalamio_keep_reading";
+const LEGACY_STORAGE_KEY = "notelys_keep_reading";
 
 // Call this from blog.page.jsx to save reading progress
 export const saveReadingProgress = (blog) => {
@@ -31,7 +32,21 @@ const KeepReading = () => {
 
     useEffect(() => {
         try {
-            const saved = localStorage.getItem(STORAGE_KEY);
+            let saved = localStorage.getItem(STORAGE_KEY);
+
+            if (saved === null) {
+                const legacySaved = localStorage.getItem(LEGACY_STORAGE_KEY);
+                if (legacySaved !== null) {
+                    saved = legacySaved;
+                    try {
+                        localStorage.setItem(STORAGE_KEY, legacySaved);
+                        localStorage.removeItem(LEGACY_STORAGE_KEY);
+                    } catch (e) {
+                        // Keep displaying the legacy value if storage cannot complete the migration.
+                    }
+                }
+            }
+
             if (saved) {
                 const data = JSON.parse(saved);
                 // Only show if saved within last 7 days
