@@ -11,7 +11,7 @@ import {
 const ARTICLE = '<p>Intro text.</p><h2>Training</h2><p>Weeks of running.</p><h3>Shoes</h3><p>Good shoes.</p><h2>Race day</h2><p>It rained.</p>'
 
 let editor
-const make = (html = ARTICLE) => (editor = new Editor({ extensions: [StarterKit, Image, AiSuggestion], content: html }))
+const make = (html = ARTICLE) => (editor = new Editor({ extensions: [StarterKit.configure({ trailingNode: false }), Image, AiSuggestion], content: html }))
 afterEach(() => editor?.destroy())
 
 const html = () => editor.getHTML()

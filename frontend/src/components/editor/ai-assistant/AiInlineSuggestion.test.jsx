@@ -14,7 +14,7 @@ beforeEach(() => {
   document.body.appendChild(mount)
   editor = new Editor({
     element: mount,
-    extensions: [StarterKit, Image, AiSuggestion],
+    extensions: [StarterKit.configure({ trailingNode: false }), Image, AiSuggestion],
     content: '<h2>Gallery</h2><p>Old caption.</p><img src="https://x.io/a.png"><h2>End</h2>',
   })
 })

@@ -104,7 +104,7 @@ const BlogEditor = () => {
         setServerContentSig?.(null); // fresh new post — nothing on the server yet
         setEditingDraftId(null);
         if (editorRef.current) {
-            editorRef.current.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] });
+            editorRef.current.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, { emitUpdate: false });
         }
         if (titleRef.current) {
             titleRef.current.value = "";
@@ -184,9 +184,9 @@ const BlogEditor = () => {
         if (editorRef.current) {
             const normalized = Array.isArray(draft.content) ? draft.content[0] : draft.content;
             if (normalized?.type === 'doc') {
-                editorRef.current.commands.setContent(normalized);
+                editorRef.current.commands.setContent(normalized, { emitUpdate: false });
             } else {
-                editorRef.current.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] });
+                editorRef.current.commands.setContent({ type: 'doc', content: [{ type: 'paragraph' }] }, { emitUpdate: false });
             }
         }
 

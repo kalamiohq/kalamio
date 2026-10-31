@@ -1,8 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Link from "@tiptap/extension-link";
 import Icon from "../../Icon";
 import { describeTarget, describeCounts } from "../../../common/ai-editor";
 
@@ -51,7 +49,7 @@ const AiProposalCard = ({ proposal, state, removal = { stale: false, counts: {},
 
     // The editable preview: a small TipTap editor, styled as green "added" text.
     const editor = useEditor({
-        extensions: [StarterKit, Underline, Link.configure({ openOnClick: false, autolink: false })],
+        extensions: [StarterKit.configure({ link: { openOnClick: false, autolink: false } })],
         content: proposal.content,
         editable: pending,
         editorProps: {
