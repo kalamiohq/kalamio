@@ -413,6 +413,12 @@
 }
 
 /* ── Bubble Menu ────────────────────────────────────────────── */
+/* The v3 BubbleMenu renders inside the editor wrapper (tippy used to append it to <body>), so lift
+   it above the sticky toolbar (z-index 30) or it hides behind it when the selection is near the top. */
+.bubble-menu-popper {
+  z-index: 40;
+}
+
 .bubble-menu {
   display: flex;
   align-items: center;

@@ -246,7 +246,7 @@ export const applyProposal = (editor, proposal, html) => {
         let chain = editor.chain();
         if (editor.commands.clearAiSuggestion) chain = chain.clearAiSuggestion();
         chain = target.replaceAll
-            ? chain.setContent(html, true)
+            ? chain.setContent(html, { emitUpdate: true })
             : chain.insertContentAt(target.at !== undefined ? target.at : { from: target.from, to: target.to }, html);
         if (!chain.run()) return { ok: false, message: "The editor couldn't apply this change." };
         const verb = proposal.operation === 'replace' ? 'Replaced' : proposal.operation === 'append' ? 'Appended' : 'Inserted';
