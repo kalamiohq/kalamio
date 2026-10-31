@@ -62,6 +62,7 @@ describe("ReadingProgress", () => {
         expect(indicator).toHaveAttribute("aria-valuemin", "0");
         expect(indicator).toHaveAttribute("aria-valuemax", "100");
         expect(indicator).not.toHaveAttribute("hidden");
+        expect(indicator.style.display).not.toBe("none");
         expect(currentProgress(indicator)).toBe(0);
         expect(ticksOf(indicator)).toHaveLength(15);
         expect(activeTick(indicator)).toBe(0);
@@ -108,12 +109,14 @@ describe("ReadingProgress", () => {
         rect = { top: 100, height: 300 };
         render(<Harness />);
         const indicator = screen.getByRole("progressbar", { hidden: true });
+        expect(indicator.style.display).toBe("none");
         expect(indicator).not.toBeVisible();
 
         // It comes back once the article is taller than the viewport.
         rect = { top: -800, height: 4000 };
         fireEvent.scroll(window);
         flushRaf();
+        expect(indicator.style.display).toBe("");
         expect(indicator).toBeVisible();
         expect(currentProgress(indicator)).toBe(25);
     });

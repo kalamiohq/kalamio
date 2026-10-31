@@ -27,7 +27,7 @@ const ReadingProgress = ({ targetRef, resetKey }) => {
 
             // The whole article fits on screen, so there is no position to track.
             if (scrollable <= 0) {
-                indicator.hidden = true;
+                indicator.style.display = "none";
                 return;
             }
 
@@ -37,7 +37,7 @@ const ReadingProgress = ({ targetRef, resetKey }) => {
                 Math.max(0, (-rect.top / scrollable) * 100)
             );
 
-            indicator.hidden = false;
+            indicator.style.display = "";
             indicator.setAttribute("aria-valuenow", String(Math.round(progress)));
 
             const active = Math.round((progress / 100) * (ticks.length - 1));
@@ -89,8 +89,7 @@ const ReadingProgress = ({ targetRef, resetKey }) => {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={0}
-            className="fixed top-1/2 right-2 z-50 flex -translate-y-1/2 flex-col items-end gap-[7px] pointer-events-none sm:right-8"
-            hidden
+            className="fixed top-1/2 right-8 z-50 hidden -translate-y-1/2 flex-col items-end gap-[7px] pointer-events-none md:flex"
         >
             {Array.from({ length: TICK_COUNT }, (_, index) => (
                 <span
