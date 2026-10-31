@@ -1,5 +1,5 @@
 import { useSeo, buildArticleJsonLd, PRODUCTION_ORIGIN } from "../common/useSeo";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link, useParams, useNavigate, useLocation, useOutletContext } from "react-router-dom";
 import AnimationWrapper from "../common/page-animation";
 import ArticleSkeleton from "../components/article-skeleton.component";
@@ -8,6 +8,7 @@ import { estimateReadTime } from "../common/read-time";
 import BlogInteraction from "../components/blog-interaction.component";
 import BlogPostCard from "../components/blog-post.component";
 import BlogContent from "../components/blog-content.component";
+import ReadingProgress from "../components/reading-progress.component";
 import CommentsContainer, { fetchComments } from "../components/comments.component";
 import { saveReadingProgress } from "../components/keep-reading.component";
 import { cdnUrl } from "../common/cdn";
@@ -154,6 +155,7 @@ const BlogPage = () => {
     // UI-only state (not server data)
     const [ commentsWrapper, setCommentsWrapper ] = useState(false);
     const [ totalParentCommentsLoaded, setTotalParentCommentsLoaded ] = useState(0);
+    const articleRef = useRef(null);
 
     // ── Query hooks ─────────────────────────────────────────────
     const blogQuery = useBlogDetail(blog_id);
@@ -429,7 +431,8 @@ const BlogPage = () => {
                             </div>
                         ) : (
                             /* ── Article View (existing) ── */
-                            <>
+                            <div ref={articleRef}>
+                                <ReadingProgress targetRef={articleRef} resetKey={blog_id} />
                                 <div className="max-w-[720px] mx-auto mt-4 md:mt-8">
                                     <h1 className="text-4xl md:text-5xl font-extrabold font-inter leading-tight md:leading-[1.1] text-black mb-4 tracking-tight">
                                         {/* Inline + align-middle keeps the icon vertically centered on the title's first
@@ -516,7 +519,7 @@ const BlogPage = () => {
 
                                     {!isDraft && <BlogInteraction />}
                                 </div>
-                            </>
+                            </div>
                         )}
 
                         {!isDraft && <CommentsContainer />}
