@@ -4,15 +4,24 @@ import Icon from "./Icon";
 const TICK_COUNT = 15;
 // Height of the sticky navbar, so a heading scrolled into view isn't hidden under it.
 const HEADER_OFFSET = 80;
+// scrollIntoView can stop a fraction of a pixel short of the offset, so a heading that close still
+// counts as reached.
+const ACTIVE_SECTION_SLACK = 1;
+
+const sectionTickClass = (isActive) =>
+    `h-[2px] flex-none rounded-full ${isActive ? "w-[26px] bg-black" : "w-[16px] bg-border"}`;
 
 // Vertical reading-progress indicator: a column of short ticks near the right edge, with the tick
 // for the reader's current position drawn dark. It measures the target article container, not the
 // whole document, so comments/footer below the article don't count toward progress. Updates go
 // through the DOM (not React state) to keep scroll handling cheap.
 //
+// Sizes in the sections UI are in px, not Tailwind's rem scale: the app's root font size is 14px.
+//
 // When the article body has two or more headings, the column switches to one tick per section and
-// the active tick follows the heading the reader is in. On narrow screens those same sections are
-// offered through a fixed "Contents" button that opens a sheet.
+// the active tick follows the heading the reader is in. Hovering the column (or tabbing into it)
+// opens a panel with each section's title. On narrow screens those same sections are offered
+// through a fixed "Contents" button that opens a sheet.
 const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
     const indicatorRef = useRef(null);
     const tickRefs = useRef([]);
@@ -35,7 +44,7 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
         }
 
         const next = Array.from(container.querySelectorAll("h1, h2, h3"))
-            .map((el) => ({ el, text: (el.textContent || "").trim() }))
+            .map((el) => ({ el, text: (el.textContent || "").trim(), isSub: el.tagName === "H3" }))
             .filter((section) => section.text);
 
         // scrollIntoView respects scroll-margin, so the heading stops below the sticky navbar.
@@ -78,7 +87,7 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                 // The active section is the last heading whose top has reached the navbar offset.
                 let active = 0;
                 sections.forEach((section, index) => {
-                    if (section.el.getBoundingClientRect().top - HEADER_OFFSET <= 0) {
+                    if (section.el.getBoundingClientRect().top - HEADER_OFFSET <= ACTIVE_SECTION_SLACK) {
                         active = index;
                     }
                 });
@@ -190,48 +199,60 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
 
     return (
         <>
-            <div
-                ref={indicatorRef}
-                {...(hasSections
-                    ? { role: "navigation", "aria-label": "Article sections" }
-                    : {
-                        role: "progressbar",
-                        "aria-label": "Reading progress",
-                        "aria-valuemin": 0,
-                        "aria-valuemax": 100,
-                        "aria-valuenow": 0,
-                    })}
-                className="fixed top-1/2 right-8 z-50 hidden -translate-y-1/2 flex-col items-end gap-[7px] pointer-events-none lg:flex"
-            >
-                {hasSections
-                    ? sections.map((section, index) => {
-                        const isActive = index === activeIndex;
-                        return (
-                            <button
+            {hasSections ? (
+                <nav
+                    ref={indicatorRef}
+                    aria-label="Article sections"
+                    className="group/toc fixed top-1/2 right-[32px] z-50 hidden -translate-y-1/2 lg:block"
+                >
+                    <div
+                        aria-hidden="true"
+                        className="flex flex-col items-end gap-[12px] py-[8px] pl-[12px] transition-opacity duration-150 group-hover/toc:opacity-0 group-has-[:focus-visible]/toc:opacity-0"
+                    >
+                        {sections.map((section, index) => (
+                            <span
                                 key={`${section.text}-${index}`}
-                                type="button"
-                                aria-label={section.text}
-                                aria-current={isActive ? "location" : undefined}
-                                data-active={String(isActive)}
-                                onClick={() => scrollToSection(index)}
-                                className="group/tick pointer-events-auto relative flex items-center justify-end rounded-full py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/50"
-                            >
-                                <span
-                                    aria-hidden="true"
-                                    className="pointer-events-none absolute right-full top-1/2 mr-2 max-w-[240px] -translate-y-1/2 truncate whitespace-nowrap rounded-md bg-black px-2 py-1 text-xs font-medium text-white opacity-0 shadow-md transition-opacity duration-150 group-hover/tick:opacity-100 group-focus-visible/tick:opacity-100"
-                                >
-                                    {section.text}
-                                </span>
-                                <span
-                                    aria-hidden="true"
-                                    className={`h-[2px] rounded-full transition-all duration-150 ${
-                                        isActive ? "w-6 bg-black" : "w-4 bg-border"
+                                className={sectionTickClass(index === activeIndex)}
+                            />
+                        ))}
+                    </div>
+                    {/* -right-[15px] keeps the panel's ticks exactly over the resting ticks. */}
+                    <div className="pointer-events-none absolute -right-[15px] top-1/2 max-h-[80vh] w-[300px] -translate-y-1/2 overflow-y-auto rounded-[16px] border border-border bg-white p-[10px] opacity-0 shadow-[0_16px_40px_rgba(0,0,0,0.10)] transition-opacity duration-150 group-hover/toc:pointer-events-auto group-hover/toc:opacity-100 group-has-[:focus-visible]/toc:pointer-events-auto group-has-[:focus-visible]/toc:opacity-100">
+                        {sections.map((section, index) => {
+                            const isActive = index === activeIndex;
+                            return (
+                                <button
+                                    key={`${section.text}-${index}`}
+                                    type="button"
+                                    aria-current={isActive ? "location" : undefined}
+                                    data-active={String(isActive)}
+                                    onClick={() => scrollToSection(index)}
+                                    className={`flex w-full items-center justify-between gap-[14px] rounded-[10px] py-[8px] pr-[4px] text-left font-inter text-[14px] leading-[1.35] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-black/50 ${
+                                        section.isSub ? "pl-[24px]" : "pl-[10px]"
+                                    } ${
+                                        isActive
+                                            ? "bg-grey font-semibold text-black"
+                                            : "text-dark-grey hover:bg-grey hover:text-black"
                                     }`}
-                                />
-                            </button>
-                        );
-                    })
-                    : Array.from({ length: TICK_COUNT }, (_, index) => (
+                                >
+                                    <span>{section.text}</span>
+                                    <span aria-hidden="true" className={sectionTickClass(isActive)} />
+                                </button>
+                            );
+                        })}
+                    </div>
+                </nav>
+            ) : (
+                <div
+                    ref={indicatorRef}
+                    role="progressbar"
+                    aria-label="Reading progress"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={0}
+                    className="fixed top-1/2 right-8 z-50 hidden -translate-y-1/2 flex-col items-end gap-[7px] pointer-events-none lg:flex"
+                >
+                    {Array.from({ length: TICK_COUNT }, (_, index) => (
                         <span
                             key={index}
                             ref={(node) => {
@@ -244,8 +265,10 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                             }`}
                         />
                     ))}
-            </div>
+                </div>
+            )}
 
+            {/* Sits above the bottom tab bar, which is also only shown below lg. */}
             {hasSections && (
                 <button
                     ref={contentsButtonRef}
@@ -253,18 +276,18 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                     onClick={() => setSheetOpen(true)}
                     aria-haspopup="dialog"
                     aria-expanded={sheetOpen}
-                    className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-black shadow-lg transition-all hover:bg-grey active:scale-95 lg:hidden"
+                    className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] right-[16px] z-50 flex items-center gap-[8px] rounded-full border border-border bg-white px-[16px] py-[10px] font-inter text-[14px] font-semibold text-black shadow-[0_6px_20px_rgba(0,0,0,0.12)] transition-colors hover:bg-grey active:scale-95 lg:hidden"
                 >
-                    <Icon name="list" className="text-lg" />
+                    <Icon name="format_list_bulleted" className="text-[16px]" />
                     Contents
                 </button>
             )}
 
             {sheetOpen && (
-                <div className="fixed inset-0 z-[60] lg:hidden">
+                <div className="fixed inset-0 z-[60] font-inter lg:hidden">
                     <div
                         className="absolute inset-0"
-                        style={{ backgroundColor: "rgba(0, 0, 0, 0.45)" }}
+                        style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }}
                         onClick={() => setSheetOpen(false)}
                     />
                     <div
@@ -272,12 +295,13 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="article-contents-title"
-                        className="absolute bottom-0 left-0 right-0 max-h-[70vh] overflow-y-auto rounded-t-2xl border border-border bg-white p-4 shadow-2xl sm:bottom-4 sm:left-auto sm:right-4 sm:w-[340px] sm:rounded-2xl"
+                        className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-[20px] bg-white px-[20px] pb-[calc(28px+env(safe-area-inset-bottom))] pt-[8px]"
                     >
-                        <div className="mb-2 flex items-center justify-between">
+                        <div aria-hidden="true" className="mx-auto mb-[14px] mt-[6px] h-[4px] w-[40px] rounded-full bg-border" />
+                        <div className="mb-[6px] flex items-center justify-between">
                             <h2
                                 id="article-contents-title"
-                                className="text-base font-semibold text-black"
+                                className="text-[18px] font-bold text-black"
                             >
                                 Contents
                             </h2>
@@ -286,22 +310,32 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                                 type="button"
                                 onClick={() => setSheetOpen(false)}
                                 aria-label="Close contents"
-                                className="flex h-8 w-8 items-center justify-center rounded-full text-dark-grey transition-colors hover:bg-grey hover:text-black"
+                                className="grid h-[36px] w-[36px] place-items-center rounded-full bg-grey text-black"
                             >
-                                <Icon name="close" className="text-xl" />
+                                <Icon name="close" className="text-[18px]" />
                             </button>
                         </div>
-                        <nav aria-label="Article contents" className="flex flex-col">
-                            {sections.map((section, index) => (
-                                <button
-                                    key={`${section.text}-${index}`}
-                                    type="button"
-                                    onClick={() => selectSection(index)}
-                                    className="w-full rounded-lg px-2 py-2 text-left text-sm text-black transition-colors hover:bg-grey"
-                                >
-                                    {section.text}
-                                </button>
-                            ))}
+                        <nav aria-label="Article contents">
+                            {sections.map((section, index) => {
+                                const isActive = index === activeIndex;
+                                return (
+                                    <button
+                                        key={`${section.text}-${index}`}
+                                        type="button"
+                                        aria-current={isActive ? "location" : undefined}
+                                        onClick={() => selectSection(index)}
+                                        className={`flex w-full items-center gap-[12px] border-b border-grey py-[13px] text-left text-[16px] leading-[1.35] last:border-b-0 ${
+                                            section.isSub ? "pl-[16px]" : ""
+                                        } ${isActive ? "font-semibold text-black" : "text-dark-grey"}`}
+                                    >
+                                        <span
+                                            aria-hidden="true"
+                                            className={`h-[20px] w-[3px] flex-none rounded-[3px] ${isActive ? "bg-black" : ""}`}
+                                        />
+                                        {section.text}
+                                    </button>
+                                );
+                            })}
                         </nav>
                     </div>
                 </div>

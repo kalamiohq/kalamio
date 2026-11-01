@@ -3,13 +3,13 @@ import { render, screen, fireEvent, cleanup, within, act } from "@testing-librar
 import { useRef } from "react";
 import ReadingProgress from "./reading-progress.component";
 
+// Both harnesses match blog.page.jsx: ReadingProgress renders before the content its refs point to.
 const Harness = () => {
     const articleRef = useRef(null);
     return (
-        <>
-            <div data-testid="article" ref={articleRef} />
+        <div data-testid="article" ref={articleRef}>
             <ReadingProgress targetRef={articleRef} resetKey="blog-1" />
-        </>
+        </div>
     );
 };
 
@@ -17,23 +17,21 @@ const SectionHarness = ({ headings = ["Intro", "Setup", "Usage"], levels = [] })
     const articleRef = useRef(null);
     const contentRef = useRef(null);
     return (
-        <>
-            <div data-testid="article" ref={articleRef}>
-                <h1>Article title</h1>
-                <div ref={contentRef}>
-                    {headings.map((text, index) => {
-                        const Tag = `h${levels[index] || 2}`;
-                        return <Tag key={text}>{text}</Tag>;
-                    })}
-                </div>
-            </div>
+        <div data-testid="article" ref={articleRef}>
             <ReadingProgress
                 targetRef={articleRef}
                 contentRef={contentRef}
                 resetKey="blog-1"
                 content={headings}
             />
-        </>
+            <h1>Article title</h1>
+            <div ref={contentRef}>
+                {headings.map((text, index) => {
+                    const Tag = `h${levels[index] || 2}`;
+                    return <Tag key={text}>{text}</Tag>;
+                })}
+            </div>
+        </div>
     );
 };
 
@@ -238,11 +236,11 @@ describe("ReadingProgress", () => {
         );
         expect(tickBar(screen.getByRole("button", { name: "Intro" }))).toHaveClass(
             "bg-black",
-            "w-6"
+            "w-[26px]"
         );
         expect(tickBar(screen.getByRole("button", { name: "Setup" }))).toHaveClass(
             "bg-border",
-            "w-4"
+            "w-[16px]"
         );
 
         scrollToTops([-200, -100, 300]);
@@ -252,11 +250,26 @@ describe("ReadingProgress", () => {
         );
         expect(tickBar(screen.getByRole("button", { name: "Intro" }))).toHaveClass(
             "bg-border",
-            "w-4"
+            "w-[16px]"
         );
 
         scrollToTops([-200, -100, -50]);
         expect(screen.getByRole("button", { name: "Usage" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+    });
+
+    it("counts a heading that stops a fraction of a pixel short of the navbar offset", () => {
+        render(<SectionHarness />);
+
+        setHeadingTop(screen.getByRole("heading", { name: "Intro" }), -500);
+        setHeadingTop(screen.getByRole("heading", { name: "Setup" }), 80.2);
+        setHeadingTop(screen.getByRole("heading", { name: "Usage" }), 900);
+        fireEvent.scroll(window);
+        flushRaf();
+
+        expect(screen.getByRole("button", { name: "Setup" })).toHaveAttribute(
             "aria-current",
             "location"
         );
@@ -288,6 +301,56 @@ describe("ReadingProgress", () => {
         expect(
             screen.queryByRole("button", { name: /contents/i })
         ).not.toBeInTheDocument();
+    });
+
+    it("shows the list icon on the Contents button, not the unknown-icon fallback", () => {
+        render(<SectionHarness />);
+
+        const icon = screen.getByRole("button", { name: /contents/i }).querySelector("svg");
+        expect(icon).toHaveClass("lucide-list");
+    });
+
+    it("draws one resting tick per section and lists every title in the panel", () => {
+        render(<SectionHarness />);
+
+        const nav = navIndicator();
+        expect(nav.querySelectorAll('[aria-hidden="true"] > span')).toHaveLength(3);
+        ["Intro", "Setup", "Usage"].forEach((heading) => {
+            expect(within(nav).getByRole("button", { name: heading })).toHaveTextContent(heading);
+        });
+    });
+
+    it("indents level 3 headings in the panel and the sheet", () => {
+        render(<SectionHarness levels={[2, 3, 2]} />);
+
+        const nav = navIndicator();
+        expect(within(nav).getByRole("button", { name: "Intro" })).toHaveClass("pl-[10px]");
+        expect(within(nav).getByRole("button", { name: "Setup" })).toHaveClass("pl-[24px]");
+
+        fireEvent.click(screen.getByRole("button", { name: /contents/i }));
+        const dialog = screen.getByRole("dialog");
+        expect(within(dialog).getByRole("button", { name: "Intro" })).not.toHaveClass("pl-[16px]");
+        expect(within(dialog).getByRole("button", { name: "Setup" })).toHaveClass("pl-[16px]");
+    });
+
+    it("marks the current section in the phone sheet", () => {
+        render(<SectionHarness />);
+
+        setHeadingTop(screen.getByRole("heading", { name: "Intro" }), -500);
+        setHeadingTop(screen.getByRole("heading", { name: "Setup" }), 40);
+        setHeadingTop(screen.getByRole("heading", { name: "Usage" }), 900);
+        fireEvent.scroll(window);
+        flushRaf();
+
+        fireEvent.click(screen.getByRole("button", { name: /contents/i }));
+        const dialog = screen.getByRole("dialog");
+        expect(within(dialog).getByRole("button", { name: "Setup" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+        expect(within(dialog).getByRole("button", { name: "Intro" })).not.toHaveAttribute(
+            "aria-current"
+        );
     });
 
     it("opens the phone Contents sheet, scrolls to a heading and closes it", () => {
