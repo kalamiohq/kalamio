@@ -11,6 +11,16 @@ import mongoose from 'mongoose';
 const INITIAL_RETRY_DELAY_MS = 3000;
 const MAX_RETRY_DELAY_MS = 30000;
 
+// Mongoose's 'disconnected' event only says the primary went away. Log why, so a flap names its cause
+// ("connection <monitor> ..." is the heartbeat, "connection 2 ..." is a pool connection).
+export const logServerLoss = (client) => {
+    client.on('serverDescriptionChanged', ({ address, newDescription }) => {
+        if (newDescription.type === 'Unknown' && newDescription.error) {
+            console.warn(`⚠️  MongoDB server ${address} lost: ${newDescription.error.message}`);
+        }
+    });
+};
+
 const connectDB = async () => {
     for (let attempt = 1; ; attempt++) {
         try {
@@ -19,12 +29,17 @@ const connectDB = async () => {
                 serverSelectionTimeoutMS: 10000,
                 // Connection pool settings
                 maxPoolSize: 10,          // Max concurrent connections to MongoDB
-                minPoolSize: 2,           // Keep 2 connections warm for low-latency
-                maxIdleTimeMS: 30000,     // Close idle connections after 30s
+                // A new connection costs a TLS + auth handshake, about 1.4s from Cloud Run to Atlas.
+                // Keep enough warm for the overlapping requests of one page load.
+                minPoolSize: 5,
+                // Close idle connections after 10 min, under Cloud Run's 20-min limit for idle outbound
+                // connections. At 30s the idle instance redid about 12 handshakes a minute.
+                maxIdleTimeMS: 600000,
                 connectTimeoutMS: 45000,  // Timeout for initial connection
                 socketTimeoutMS: 45000,   // Timeout for socket operations
             });
             console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+            logServerLoss(conn.connection.getClient());
             return;
         } catch (err) {
             // Exponential backoff, capped: 3s → 6s → 12s → 24s → 30s → 30s …
