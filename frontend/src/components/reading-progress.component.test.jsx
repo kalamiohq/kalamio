@@ -41,7 +41,7 @@ const activeTick = (indicator) =>
 const currentProgress = (indicator = screen.getByRole("progressbar")) =>
     Number(indicator.getAttribute("aria-valuenow"));
 
-const tickBar = (button) => button.querySelector("span:last-child");
+const tickBar = (button) => button.querySelector(":scope > span:last-child");
 const navIndicator = () =>
     screen.getByRole("navigation", { name: "Article sections" });
 
@@ -188,6 +188,27 @@ describe("ReadingProgress", () => {
         expect(navIndicator().style.display).toBe("");
     });
 
+    it("keeps the progress ticks hidden on a mini article at high browser zoom", () => {
+        // Zoom shrinks the screen, so the article counts as 2.25 screens, but its body is one line.
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
+        rect = { top: 0, height: 900 };
+        render(<SectionHarness headings={[]} />);
+
+        const indicator = screen.getByRole("progressbar", { hidden: true });
+        const body = screen.getByTestId("article").lastElementChild;
+        const setBodyHeight = (height) => {
+            body.getBoundingClientRect = () => ({ ...rect, height, bottom: height, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => {} });
+            fireEvent.scroll(window);
+            flushRaf();
+        };
+
+        setBodyHeight(34);
+        expect(indicator.style.display).toBe("none");
+
+        setBodyHeight(800);
+        expect(indicator.style.display).toBe("");
+    });
+
     it("recalculates when the viewport is resized", () => {
         render(<Harness />);
         const indicator = screen.getByRole("progressbar");
@@ -298,6 +319,43 @@ describe("ReadingProgress", () => {
             "aria-current",
             "location"
         );
+    });
+
+    it("stays on a clicked section until the smooth scroll has finished", () => {
+        // Only the timers: requestAnimationFrame stays on the stub from beforeEach.
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        try {
+            render(<SectionHarness />);
+            const nav = navIndicator();
+            fireEvent.click(within(nav).getByRole("button", { name: "Usage" }));
+
+            // Part-way there: the scroll position alone would make "Setup" current.
+            setHeadingTop(screen.getByRole("heading", { name: "Intro" }), -500);
+            setHeadingTop(screen.getByRole("heading", { name: "Setup" }), 40);
+            setHeadingTop(screen.getByRole("heading", { name: "Usage" }), 900);
+            fireEvent.scroll(window);
+            flushRaf();
+            expect(within(nav).getByRole("button", { name: "Usage" })).toHaveAttribute("aria-current", "location");
+
+            // Once scrolling stops, the position takes over again.
+            act(() => {
+                vi.advanceTimersByTime(150);
+            });
+            flushRaf();
+            expect(within(nav).getByRole("button", { name: "Setup" })).toHaveAttribute("aria-current", "location");
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("reserves the bold width on every row, so the panel doesn't shift when the section changes", () => {
+        render(<SectionHarness />);
+
+        const row = within(navIndicator()).getByRole("button", { name: "Setup" });
+        expect(row).not.toHaveAttribute("aria-current");
+        const reserved = row.querySelector('[aria-hidden="true"].font-semibold');
+        expect(reserved).toHaveTextContent("Setup");
+        expect(reserved).toHaveClass("invisible");
     });
 
     it("scrolls to the heading when its tick is clicked", () => {
