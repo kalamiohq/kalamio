@@ -40,6 +40,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   h.current = makeFakeSocket();
   setVisibility('visible');
+  vi.clearAllMocks(); // resetting visibility can refetch the badges; that must not count for the test
 });
 
 afterEach(() => {

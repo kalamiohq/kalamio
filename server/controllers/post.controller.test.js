@@ -41,7 +41,7 @@ describe('getPostActivity', () => {
 
     await getPostActivity({ body: { blog_id: 'my-post' } }, mockRes())
 
-    expect(Post.findOne).toHaveBeenCalledWith({ blog_id: 'my-post', draft: false })
+    expect(Post.findOne).toHaveBeenCalledWith({ blog_id: { $eq: 'my-post' }, draft: false })
     expect(select).toHaveBeenCalledWith('activity.total_likes activity.total_comments poll')
   })
 

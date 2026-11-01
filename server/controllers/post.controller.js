@@ -179,7 +179,7 @@ export const getPost = (req, res) => {
 // A published post's engagement numbers and nothing else. Signed-in readers poll this once a minute
 // while the post is open, so the counts stay current without holding a socket open.
 export const getPostActivity = async (req, res) => {
-    const post = await Post.findOne({ blog_id: req.body.blog_id, draft: false })
+    const post = await Post.findOne({ blog_id: { $eq: req.body.blog_id }, draft: false })
         .select("activity.total_likes activity.total_comments poll")
         .lean();
 
