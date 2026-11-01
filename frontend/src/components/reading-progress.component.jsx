@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 
 const TICK_COUNT = 15;
+// The progress ticks need room to move. On a shorter article, a small scroll would jump the dark
+// tick from one end of the column to the other.
+const MIN_SCREENS_FOR_PROGRESS_TICKS = 1.5;
 // Height of the sticky navbar, so a heading scrolled into view isn't hidden under it.
 const HEADER_OFFSET = 80;
 // scrollIntoView can stop a fraction of a pixel short of the offset, so a heading that close still
@@ -75,8 +78,12 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                 window.innerHeight || document.documentElement.clientHeight || 0;
             const scrollable = rect.height - viewportHeight;
 
-            // The whole article fits on screen, so there is no position to track.
-            if (scrollable <= 0) {
+            // With sections, the ticks are navigation, so they only hide when the whole article fits
+            // on screen and there's nothing to jump to.
+            const tooShort = hasSections
+                ? scrollable <= 0
+                : rect.height < viewportHeight * MIN_SCREENS_FOR_PROGRESS_TICKS;
+            if (tooShort) {
                 indicator.style.display = "none";
                 return;
             }

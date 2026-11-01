@@ -163,6 +163,31 @@ describe("ReadingProgress", () => {
         expect(currentProgress(indicator)).toBe(25);
     });
 
+    it("hides the progress ticks until the article is 1.5 screens tall", () => {
+        rect = { top: 0, height: 1000 }; // taller than the 800px viewport, but only 1.25 screens
+        render(<Harness />);
+        const indicator = screen.getByRole("progressbar", { hidden: true });
+        expect(indicator.style.display).toBe("none");
+
+        rect = { top: 0, height: 1199 };
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(indicator.style.display).toBe("none");
+
+        rect = { top: -200, height: 1200 };
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(indicator.style.display).toBe("");
+        expect(currentProgress(indicator)).toBe(50);
+    });
+
+    it("keeps section ticks on an article only slightly taller than the screen", () => {
+        rect = { top: 0, height: 1000 };
+        render(<SectionHarness />);
+
+        expect(navIndicator().style.display).toBe("");
+    });
+
     it("recalculates when the viewport is resized", () => {
         render(<Harness />);
         const indicator = screen.getByRole("progressbar");
