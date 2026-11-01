@@ -155,6 +155,7 @@ const BlogPage = () => {
     const [ commentsWrapper, setCommentsWrapper ] = useState(false);
     const [ totalParentCommentsLoaded, setTotalParentCommentsLoaded ] = useState(0);
     const articleRef = useRef(null);
+    const contentRef = useRef(null);
 
     // ── Query hooks ─────────────────────────────────────────────
     const blogQuery = useBlogDetail(blog_id);
@@ -412,7 +413,7 @@ const BlogPage = () => {
                         ) : (
                             /* ── Article View (existing) ── */
                             <div ref={articleRef}>
-                                <ReadingProgress targetRef={articleRef} resetKey={blog_id} />
+                                <ReadingProgress targetRef={articleRef} contentRef={contentRef} resetKey={blog_id} content={content} />
                                 <div className="max-w-[720px] mx-auto mt-4 md:mt-8">
                                     <h1 className="text-4xl md:text-5xl font-extrabold font-inter leading-tight md:leading-[1.1] text-black mb-4 tracking-tight">
                                         {/* Inline + align-middle keeps the icon vertically centered on the title's first
@@ -493,7 +494,7 @@ const BlogPage = () => {
                                 )}
 
                                 <div className="max-w-[720px] mx-auto">
-                                    <div className="my-8 font-merriweather blog-page-content" style={{ lineHeight: '1.9' }}>
+                                    <div ref={contentRef} className="my-8 font-merriweather blog-page-content" style={{ lineHeight: '1.9' }}>
                                         <BlogContent content={content} />
                                     </div>
 
