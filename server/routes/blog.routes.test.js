@@ -5,6 +5,9 @@ import jwt from 'jsonwebtoken'
 
 // The /blog-activity route pipeline (rate limit → auth → Zod → controller) with the database mocked.
 vi.mock('../Schema/Post.js', () => ({ default: { findOne: vi.fn() } }))
+// The real Blog and TextPost models call Post.discriminator() on import.
+vi.mock('../Schema/Blog.js', () => ({ default: {} }))
+vi.mock('../Schema/TextPost.js', () => ({ default: {} }))
 vi.mock('../config/s3.js', () => ({ deleteMultipleFromS3: vi.fn() }))
 
 import Post from '../Schema/Post.js'
@@ -22,7 +25,7 @@ describe('POST /blog-activity', () => {
   let token
 
   beforeAll(() => {
-    process.env.JWT_ACCESS_SECRET ||= 'test-access-secret'
+    process.env.JWT_ACCESS_SECRET = 'test-access-secret'
     token = jwt.sign({ id: 'reader-1' }, process.env.JWT_ACCESS_SECRET)
   })
 
