@@ -57,8 +57,9 @@ steps:
         # cross-instance Socket.IO broadcast activates (config/socket.js logs "Redis adapter enabled").
         'UPSTASH_REDIS_REST_URL=upstash-redis-rest-url-dev:latest,UPSTASH_REDIS_REST_TOKEN=upstash-redis-rest-token-dev:latest,CLOUDFLARE_ORIGIN_SECRET=cloudflare-origin-secret-dev:latest,REDIS_URL=redis-url-dev:latest',
         # Prerender OG/Twitter images route through the image CDN (cdn.kalamio.com).
+        # NODE_ENV=production: Secure refresh-token cookie, no localhost CORS origins, info-level logs.
         '--update-env-vars',
-        'CDN_DOMAIN=https://cdn.kalamio.com'
+        'CDN_DOMAIN=https://cdn.kalamio.com,NODE_ENV=production'
       ]
 
 images:
