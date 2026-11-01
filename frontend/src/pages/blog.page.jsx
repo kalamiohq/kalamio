@@ -21,8 +21,7 @@ import { UserContext } from "../App";
 import toast from "react-hot-toast";
 import NetworkError from "../components/network-error.component";
 import useReadTracker from "../hooks/useReadTracker";
-import { useBlogDetail, useSimilarBlogs, usePollVoteStatus } from "../hooks/queries";
-import { getSocket } from "../common/socket";
+import { useBlogDetail, useBlogActivity, useSimilarBlogs, usePollVoteStatus } from "../hooks/queries";
 import { useVotePoll } from "../hooks/mutations";
 import PollVotersModal from "../components/poll-voters-modal.component";
 
@@ -176,39 +175,20 @@ const BlogPage = () => {
     const blog = blogWithComments;
     const setBlog = setBlogWithComments;
 
-    // Live like/comment counts: join this post's room and apply pushed count updates so the numbers
-    // move in real time while it's open (the server emits blog_updated to blog:<_id> on like/comment).
-    const liveBlogId = blogQuery.data?._id;
+    // Live like/comment/poll numbers: a signed-in reader's visible tab re-reads them once a minute and
+    // they're merged into the post on screen. Not a socket, because a tab left open on an article would
+    // keep Cloud Run instances at full price (see common/socket.js). Query data only changes identity
+    // when the numbers do, so an unchanged poll can't overwrite a like the reader just made.
+    const { data: liveActivity } = useBlogActivity(blogQuery.data?.draft ? null : blogQuery.data?.blog_id);
     useEffect(() => {
-        if (!liveBlogId) return;
-        const socket = getSocket();
-        if (!socket) return;
-
-        socket.emit("join_blog", liveBlogId);
-        // Re-join on every reconnect — a reconnect gets a fresh socket that isn't in the room anymore,
-        // which would otherwise silently stop live counts until a page reload.
-        const rejoin = () => socket.emit("join_blog", liveBlogId);
-        socket.on("connect", rejoin);
-
-        const handleBlogUpdate = (data) => {
-            if (String(data.blog_id) !== String(liveBlogId)) return;
-            // poll updates arrive under activity.poll (live poll votes) — apply it to blog.poll and
-            // merge the remaining count fields (total_likes / total_comments) into activity.
-            const { poll, ...activityRest } = data.activity || {};
-            setBlogWithComments(prev => ({
-                ...prev,
-                ...(poll ? { poll } : {}),
-                activity: { ...prev.activity, ...activityRest },
-            }));
-        };
-        socket.on("blog_updated", handleBlogUpdate);
-
-        return () => {
-            socket.emit("leave_blog", liveBlogId);
-            socket.off("connect", rejoin);
-            socket.off("blog_updated", handleBlogUpdate);
-        };
-    }, [liveBlogId]);
+        if (!liveActivity) return;
+        const { activity, poll } = liveActivity;
+        setBlogWithComments(prev => ({
+            ...prev,
+            ...(poll ? { poll } : {}),
+            activity: { ...prev.activity, ...activity },
+        }));
+    }, [liveActivity]);
 
     let { title, des, tags, content, banner, author: { personal_info: { fullname, username: author_username, profile_img, bio }, account_info: { total_posts: author_total_posts, total_reads: author_total_reads } = {} }, publishedAt, publication, type, text_content, images, poll: blogPoll } = blog;
 

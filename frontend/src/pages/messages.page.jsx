@@ -3,7 +3,7 @@ import usePageTitle from "../common/usePageTitle";
 import { useContext, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { UserContext } from "../App";
-import { getSocket } from "../common/socket";
+import { acquireSocket, releaseSocket } from "../common/socket";
 import ConversationList from "../components/conversation-list.component";
 import ChatView from "../components/chat-view.component";
 import Icon from "../components/Icon";
@@ -90,11 +90,12 @@ const MessagesPage = () => {
         fetchConversations();
     }, [fetchConversations]);
 
-    // Socket.IO: listen for new messages to update conversation list
+    // Socket.IO: hold the socket open while this page is up, and listen for new messages to update
+    // the conversation list
     useEffect(() => {
         if (!access_token) return;
 
-        const socket = getSocket();
+        const socket = acquireSocket();
         if (!socket) return;
 
         const handleNewMessage = () => {
@@ -110,10 +111,14 @@ const MessagesPage = () => {
 
         socket.on('new_message', handleNewMessage);
         socket.on('request_accepted', handleRequestAccepted);
+        // Nothing is pushed while the socket is down, so reload whenever it (re)connects.
+        socket.on('connect', fetchConversations);
 
         return () => {
             socket.off('new_message', handleNewMessage);
             socket.off('request_accepted', handleRequestAccepted);
+            socket.off('connect', fetchConversations);
+            releaseSocket();
         };
     }, [access_token, fetchConversations, applyRequestAccepted]);
 

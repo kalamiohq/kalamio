@@ -14,6 +14,7 @@ import {
     searchPosts,
     searchPostsCount,
     getPost,
+    getPostActivity,
     likePost,
     isLikedByUser,
     userWrittenPosts,
@@ -70,6 +71,7 @@ router.post("/create-text-post", verifyJWT, invalidateCacheOnWrite(postWriteTags
 // showed a filled heart (per-user status is uncached) with a stale count. Localhost has no Redis,
 // which is why this only ever reproduced on dev/prod. Narrow 'feed' tag: see /latest-blogs above.
 router.post("/like-blog", verifyJWT, validate(likeBlogSchema), invalidateCacheOnWrite(['feed']), asyncHandler(likePost));
+router.post("/blog-activity", verifyJWT, validate(getBlogSchema), asyncHandler(getPostActivity));
 router.post("/isliked-by-user", verifyJWT, asyncHandler(isLikedByUser));
 router.post("/batch-isliked", verifyJWT, asyncHandler(batchIsLiked));
 
