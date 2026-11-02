@@ -106,3 +106,46 @@ describe('useSeo', () => {
     expect(jsonLd()).toBeNull() // page-specific data must not leak to the next route
   })
 })
+
+const rssLink = () =>
+  document.head.querySelector('link[rel="alternate"][type="application/rss+xml"]')
+
+describe('useSeo RSS alternate links', () => {
+  it('upserts an RSS alternate link when rssUrl is provided', () => {
+    renderHook(
+      () => useSeo({ title: 'Profile', rssUrl: 'https://kalamio.com/api/v1/feed/user/ada.xml', rssTitle: 'Ada RSS Feed' }),
+      { wrapper: wrapper('/user/ada') },
+    )
+
+    expect(rssLink()?.getAttribute('href')).toBe('https://kalamio.com/api/v1/feed/user/ada.xml')
+    expect(rssLink()?.getAttribute('title')).toBe('Ada RSS Feed')
+  })
+
+  it('does not create an RSS alternate link without rssUrl', () => {
+    renderHook(() => useSeo({ title: 'Home' }), { wrapper: wrapper('/') })
+    expect(rssLink()).toBeNull()
+  })
+
+  it('updates the RSS alternate link when rssUrl changes', () => {
+    const { rerender } = renderHook(
+      ({ rssUrl }) => useSeo({ title: 'Profile', rssUrl }),
+      { initialProps: { rssUrl: 'https://kalamio.com/api/v1/feed/user/ada.xml' }, wrapper: wrapper('/user/ada') },
+    )
+
+    expect(rssLink()?.getAttribute('href')).toBe('https://kalamio.com/api/v1/feed/user/ada.xml')
+
+    rerender({ rssUrl: 'https://kalamio.com/api/v1/feed/user/bob.xml' })
+    expect(rssLink()?.getAttribute('href')).toBe('https://kalamio.com/api/v1/feed/user/bob.xml')
+  })
+
+  it('removes the RSS alternate link on unmount', () => {
+    const { unmount } = renderHook(
+      () => useSeo({ title: 'Profile', rssUrl: 'https://kalamio.com/api/v1/feed/user/ada.xml' }),
+      { wrapper: wrapper('/user/ada') },
+    )
+
+    expect(rssLink()).not.toBeNull()
+    unmount()
+    expect(rssLink()).toBeNull()
+  })
+})
