@@ -41,6 +41,53 @@ describe('CommentCard accessible names', () => {
     })
   })
 
+  it('mounts and unmounts when the comment author changes', () => {
+    const comment = {
+      _id: 'comment-1',
+      commented_by: {
+        _id: 'author-1',
+        personal_info: {
+          fullname: 'Comment Author',
+          username: 'comment-author',
+        },
+      },
+      commentedAt: '2026-10-28T12:00:00.000Z',
+      comment: 'A comment',
+      children: [],
+    }
+    const blog = {
+      comments: { results: [comment] },
+      activity: { total_parent_comments: 1 },
+      author: { personal_info: { username: 'blog-owner' } },
+    }
+    const card = (commentData) => (
+      <MemoryRouter>
+        <UserContext.Provider
+          value={{ userAuth: { access_token: '', username: 'reader' } }}
+        >
+          <BlogContext.Provider value={{ blog, setBlog: vi.fn(), setTotalParentCommentsLoaded: vi.fn() }}>
+            <CommentCard index={0} commentData={commentData} isTextPost />
+          </BlogContext.Provider>
+        </UserContext.Provider>
+      </MemoryRouter>
+    )
+    const { rerender } = render(card(comment))
+
+    expect(screen.getByText('Comment Author')).toBeInTheDocument()
+    expect(screen.getByText('A comment')).toBeInTheDocument()
+
+    const commentWithoutAuthor = { ...comment, commented_by: undefined }
+    rerender(card(commentWithoutAuthor))
+
+    expect(screen.queryByText('Comment Author')).not.toBeInTheDocument()
+    expect(screen.queryByText('A comment')).not.toBeInTheDocument()
+
+    rerender(card(comment))
+
+    expect(screen.getByText('Comment Author')).toBeInTheDocument()
+    expect(screen.getByText('A comment')).toBeInTheDocument()
+  })
+
   it('names the comment menu and share actions', async () => {
     const comment = {
       _id: 'comment-1',
