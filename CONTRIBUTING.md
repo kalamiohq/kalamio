@@ -15,6 +15,13 @@ feedback are all welcome. This guide gets you from zero to a merged pull request
   a great start. Comment on the issue to claim it, then wait for a maintainer to assign it to
   you before you open a pull request, so two people don't build the same thing. Pull requests
   for issues that aren't assigned to you may be closed.
+- **Work on one issue at a time, and keep it moving.** To give everyone a turn, you can hold one
+  open issue at a time. Claim your next one once your pull request is merged. If an issue or pull
+  request of yours has no update for 7 days (14 for issues labeled
+  [`difficulty: hard`](https://github.com/kalamiohq/kalamio/labels/difficulty%3A%20hard)), a
+  maintainer may unassign you or close the pull request so someone else can pick it up. Any update
+  resets the clock, even "I'm stuck on X" or "I need until Friday", and the clock stops while your
+  pull request is waiting on a maintainer. You're always welcome to claim another issue later.
 - **Discuss big changes first, and wait for the `accepted` label.** For a new feature or a
   large refactor, open an issue before writing code, so we can agree on the approach. Once we
   agree it fits Kalamio and how it should be built, a maintainer adds the
