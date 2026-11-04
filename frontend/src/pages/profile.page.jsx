@@ -78,6 +78,14 @@ const ProfilePage = () => {
         ? (bio.length > 160 ? bio.slice(0, 157).trimEnd() + '…' : bio)
         : (profile_username ? `@${profile_username} on Kalamio` : undefined);
     const canonicalUrl = profile_username ? `${PRODUCTION_ORIGIN}/user/${profile_username}` : undefined;
+    const apiOrigin = (import.meta.env.VITE_SERVER_DOMAIN || `${PRODUCTION_ORIGIN}/`).replace(/\/+$/, '');
+    const isPublicProfile =
+        profile?.account_status?.status === 'active' &&
+        profile?.privacy_settings?.show_profile === 'everyone';
+    const rssUrl =
+        profile_username && isPublicProfile
+            ? `${apiOrigin}/api/v1/feed/user/${encodeURIComponent(profile_username)}.xml`
+            : undefined;
 
     useSeo({
         title: seoTitle,
@@ -85,6 +93,8 @@ const ProfilePage = () => {
         image: profile_img || undefined,
         url: canonicalUrl,
         type: 'profile',
+        rssUrl,
+        rssTitle: profile_username ? `${seoTitle} RSS Feed` : undefined,
         jsonLd: profile_username ? {
             "@context": "https://schema.org",
             "@type": "ProfilePage",
@@ -215,6 +225,17 @@ const ProfilePage = () => {
                                 {isBlocked ? "Unblock" : "Block"}
                             </button>
                         </div>
+                        )}
+                        {rssUrl && (
+                            <a
+                                href={rssUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-light rounded-radius-md flex items-center gap-2"
+                            >
+                                <Icon name="rss" className="text-xl" />
+                                RSS
+                            </a>
                         )}
                     </div>
 

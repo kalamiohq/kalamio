@@ -189,3 +189,78 @@ describe('prerender endpoint — GET /api/v1/prerender/*', () => {
     expect(res.text).toContain('<title>Kalamio</title>')
   })
 })
+
+describe('prerender RSS discovery metadata', () => {
+  it('adds an RSS URL for an active public profile', () => {
+    const meta = userMeta({
+      personal_info: { username: 'ada', fullname: 'Ada' },
+      account_status: { status: 'active' },
+      privacy_settings: { show_profile: 'everyone' },
+    })
+    expect(meta.rssUrl).toBe('https://kalamio.com/api/v1/feed/user/ada.xml')
+  })
+
+  it('does not add an RSS URL for a private profile', () => {
+    const meta = userMeta({
+      personal_info: { username: 'ada', fullname: 'Ada' },
+      account_status: { status: 'active' },
+      privacy_settings: { show_profile: 'logged_in' },
+    })
+    expect(meta.rssUrl).toBeUndefined()
+  })
+
+  it('does not add an RSS URL for a deactivated profile', () => {
+    const meta = userMeta({
+      personal_info: { username: 'ada', fullname: 'Ada' },
+      account_status: { status: 'deactivated' },
+      privacy_settings: { show_profile: 'everyone' },
+    })
+    expect(meta.rssUrl).toBeUndefined()
+  })
+
+  it('does not add an RSS URL when the username is missing', () => {
+    const meta = userMeta({
+      personal_info: {},
+      account_status: { status: 'active' },
+      privacy_settings: { show_profile: 'everyone' },
+    })
+    expect(meta.rssUrl).toBeUndefined()
+  })
+
+  it('adds an RSS URL for a public publication', () => {
+    const meta = publicationMeta({ title: 'Pub', slug: 'pub', visibility: 'public' })
+    expect(meta.rssUrl).toBe('https://kalamio.com/api/v1/feed/publication/pub.xml')
+  })
+
+  it('does not add an RSS URL for a private publication', () => {
+    const meta = publicationMeta({ title: 'Pub', slug: 'pub', visibility: 'private' })
+    expect(meta.rssUrl).toBeUndefined()
+  })
+
+  it('does not add an RSS URL for a publication without a slug', () => {
+    const meta = publicationMeta({ title: 'Pub', visibility: 'public' })
+    expect(meta.rssUrl).toBeUndefined()
+  })
+
+  it('renderMetaHtml emits an escaped RSS alternate link', () => {
+    const html = renderMetaHtml({
+      title: 'Ada',
+      description: 'Bio',
+      url: 'https://kalamio.com/user/ada',
+      rssUrl: 'https://kalamio.com/api/v1/feed/user/ada?a=1&b=2',
+    })
+    expect(html).toContain('rel="alternate"')
+    expect(html).toContain('type="application/rss+xml"')
+    expect(html).toContain('href="https://kalamio.com/api/v1/feed/user/ada?a=1&amp;b=2"')
+    expect(html).toContain('title="Ada RSS Feed"')
+  })
+
+  it('renderMetaHtml omits the RSS alternate link when rssUrl is absent', () => {
+    const html = renderMetaHtml({
+      title: 'Ada',
+      description: 'Bio',
+      url: 'https://kalamio.com/user/ada',
+    })
+    expect(html).not.toContain('rel="alternate"')
+  })
+})
