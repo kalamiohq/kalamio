@@ -103,6 +103,7 @@ const MiniEmbedCard = memo(({ url, provider, embedId }) => {
     </a>
   );
 });
+MiniEmbedCard.displayName = 'MiniEmbedCard';
 
 /* ── Providers that have native iframe embeds ─────────────────────── */
 const IFRAME_PROVIDERS = new Set(['youtube', 'spotify', 'loom', 'codepen', 'figma']);
@@ -156,4 +157,3 @@ const EmbedNodeView = memo(({ node, deleteNode }) => {
 EmbedNodeView.displayName = 'EmbedNodeView';
 
 export default EmbedNodeView;
-
