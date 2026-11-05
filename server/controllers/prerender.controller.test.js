@@ -191,6 +191,16 @@ describe('prerender endpoint — GET /api/v1/prerender/*', () => {
 })
 
 describe('prerender RSS discovery metadata', () => {
+  it('adds an RSS URL for an older profile that has no stored status or privacy fields', () => {
+    const meta = userMeta({ personal_info: { username: 'ada', fullname: 'Ada' } })
+    expect(meta.rssUrl).toBe('https://kalamio.com/api/v1/feed/user/ada.xml')
+  })
+
+  it('adds an RSS URL for an older publication that has no stored visibility', () => {
+    const meta = publicationMeta({ title: 'Pub', slug: 'pub' })
+    expect(meta.rssUrl).toBe('https://kalamio.com/api/v1/feed/publication/pub.xml')
+  })
+
   it('adds an RSS URL for an active public profile', () => {
     const meta = userMeta({
       personal_info: { username: 'ada', fullname: 'Ada' },
