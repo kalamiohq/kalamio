@@ -176,6 +176,20 @@ export const getPost = (req, res) => {
         });
 };
 
+// A published post's engagement numbers and nothing else. Signed-in readers poll this once a minute
+// while the post is open, so the counts stay current without holding a socket open.
+export const getPostActivity = async (req, res) => {
+    const post = await Post.findOne({ blog_id: { $eq: req.body.blog_id }, draft: false })
+        .select("activity.total_likes activity.total_comments poll")
+        .lean();
+
+    if (!post) {
+        return res.status(404).json({ error: "Blog not found" });
+    }
+
+    return res.status(200).json({ activity: post.activity, poll: post.poll });
+};
+
 // Like post — idempotent: the count and notification only change when the like state actually flips,
 // so a stale/duplicate request can't inflate total_likes (which is now broadcast live to all viewers).
 export const likePost = async (req, res) => {

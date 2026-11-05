@@ -1,0 +1,514 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup, within, act } from "@testing-library/react";
+import { useRef } from "react";
+import ReadingProgress from "./reading-progress.component";
+
+// Both harnesses match blog.page.jsx: ReadingProgress renders before the content its refs point to.
+const Harness = () => {
+    const articleRef = useRef(null);
+    return (
+        <div data-testid="article" ref={articleRef}>
+            <ReadingProgress targetRef={articleRef} resetKey="blog-1" />
+        </div>
+    );
+};
+
+const SectionHarness = ({ headings = ["Intro", "Setup", "Usage"], levels = [] }) => {
+    const articleRef = useRef(null);
+    const contentRef = useRef(null);
+    return (
+        <div data-testid="article" ref={articleRef}>
+            <ReadingProgress
+                targetRef={articleRef}
+                contentRef={contentRef}
+                resetKey="blog-1"
+                content={headings}
+            />
+            <h1>Article title</h1>
+            <div ref={contentRef}>
+                {headings.map((text, index) => {
+                    const Tag = `h${levels[index] || 2}`;
+                    return <Tag key={text}>{text}</Tag>;
+                })}
+            </div>
+        </div>
+    );
+};
+
+const ticksOf = (indicator) => Array.from(indicator.querySelectorAll("span"));
+const activeTick = (indicator) =>
+    ticksOf(indicator).findIndex((tick) => tick.getAttribute("data-active") === "true");
+const currentProgress = (indicator = screen.getByRole("progressbar")) =>
+    Number(indicator.getAttribute("aria-valuenow"));
+
+const tickBar = (button) => button.querySelector(":scope > span:last-child");
+const navIndicator = () =>
+    screen.getByRole("navigation", { name: "Article sections" });
+
+const setHeadingTop = (heading, top) => {
+    heading.getBoundingClientRect = vi.fn(() => ({
+        top,
+        height: 40,
+        bottom: top + 40,
+        left: 0,
+        right: 0,
+        width: 0,
+        x: 0,
+        y: top,
+        toJSON: () => {},
+    }));
+};
+
+describe("ReadingProgress", () => {
+    let rect;
+    let rafQueue;
+
+    const flushRaf = () => {
+        const queued = rafQueue;
+        rafQueue = [];
+        act(() => {
+            queued.forEach((cb) => cb(0));
+        });
+    };
+
+    beforeEach(() => {
+        rect = { top: 0, height: 4000 };
+        rafQueue = [];
+        vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(() => ({
+            top: rect.top,
+            height: rect.height,
+            bottom: rect.top + rect.height,
+            left: 0,
+            right: 0,
+            width: 0,
+            x: 0,
+            y: 0,
+            toJSON: () => {},
+        }));
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 800 });
+        vi.stubGlobal("requestAnimationFrame", (cb) => { rafQueue.push(cb); return rafQueue.length; });
+        vi.stubGlobal("cancelAnimationFrame", () => {});
+    });
+
+    afterEach(() => {
+        cleanup();
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it("renders a vertical column of ticks at 0% at the top of a long article", () => {
+        render(<Harness />);
+        const indicator = screen.getByRole("progressbar");
+
+        expect(indicator).toHaveAttribute("role", "progressbar");
+        expect(indicator).toHaveAttribute("aria-valuemin", "0");
+        expect(indicator).toHaveAttribute("aria-valuemax", "100");
+        expect(indicator).not.toHaveAttribute("hidden");
+        expect(indicator.style.display).not.toBe("none");
+        expect(currentProgress(indicator)).toBe(0);
+        expect(ticksOf(indicator)).toHaveLength(15);
+        expect(activeTick(indicator)).toBe(0);
+        expect(ticksOf(indicator)[0]).toHaveClass("bg-black");
+    });
+
+    it("moves the dark tick down the column as the reader scrolls", () => {
+        render(<Harness />);
+
+        rect.top = -1600; // half of the 3200px scrollable distance
+        fireEvent.scroll(window);
+        flushRaf();
+
+        const indicator = screen.getByRole("progressbar");
+        expect(currentProgress(indicator)).toBe(50);
+        expect(activeTick(indicator)).toBe(7);
+        expect(ticksOf(indicator).filter((tick) => tick.getAttribute("data-active") === "true")).toHaveLength(1);
+    });
+
+    it("reaches 100% at the end and stays clamped between 0 and 100", () => {
+        render(<Harness />);
+        const indicator = screen.getByRole("progressbar");
+
+        rect.top = -3200; // article bottom aligns with viewport bottom
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(currentProgress(indicator)).toBe(100);
+        expect(activeTick(indicator)).toBe(14);
+
+        rect.top = -9999;
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(currentProgress(indicator)).toBe(100);
+        expect(activeTick(indicator)).toBe(14);
+
+        rect.top = 200; // article starts below the viewport top
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(currentProgress(indicator)).toBe(0);
+        expect(activeTick(indicator)).toBe(0);
+    });
+
+    it("hides the indicator when the whole article fits on screen", () => {
+        rect = { top: 100, height: 300 };
+        render(<Harness />);
+        const indicator = screen.getByRole("progressbar", { hidden: true });
+        expect(indicator.style.display).toBe("none");
+        expect(indicator).not.toBeVisible();
+
+        // It comes back once the article is taller than the viewport.
+        rect = { top: -800, height: 4000 };
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(indicator.style.display).toBe("");
+        expect(indicator).toBeVisible();
+        expect(currentProgress(indicator)).toBe(25);
+    });
+
+    it("hides the progress ticks until the article is 1.5 screens tall", () => {
+        rect = { top: 0, height: 1000 }; // taller than the 800px viewport, but only 1.25 screens
+        render(<Harness />);
+        const indicator = screen.getByRole("progressbar", { hidden: true });
+        expect(indicator.style.display).toBe("none");
+
+        rect = { top: 0, height: 1199 };
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(indicator.style.display).toBe("none");
+
+        rect = { top: -200, height: 1200 };
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(indicator.style.display).toBe("");
+        expect(currentProgress(indicator)).toBe(50);
+    });
+
+    it("keeps section ticks on an article only slightly taller than the screen", () => {
+        rect = { top: 0, height: 1000 };
+        render(<SectionHarness />);
+
+        expect(navIndicator().style.display).toBe("");
+    });
+
+    it("keeps the progress ticks hidden on a mini article at high browser zoom", () => {
+        // Zoom shrinks the screen, so the article counts as 2.25 screens, but its body is one line.
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
+        rect = { top: 0, height: 900 };
+        render(<SectionHarness headings={[]} />);
+
+        const indicator = screen.getByRole("progressbar", { hidden: true });
+        const body = screen.getByTestId("article").lastElementChild;
+        const setBodyHeight = (height) => {
+            body.getBoundingClientRect = () => ({ ...rect, height, bottom: height, left: 0, right: 0, width: 0, x: 0, y: 0, toJSON: () => {} });
+            fireEvent.scroll(window);
+            flushRaf();
+        };
+
+        setBodyHeight(34);
+        expect(indicator.style.display).toBe("none");
+
+        setBodyHeight(800);
+        expect(indicator.style.display).toBe("");
+    });
+
+    it("recalculates when the viewport is resized", () => {
+        render(<Harness />);
+        const indicator = screen.getByRole("progressbar");
+
+        rect.top = -800; // 25% at 800px viewport height
+        fireEvent.scroll(window);
+        flushRaf();
+        expect(currentProgress(indicator)).toBe(25);
+
+        Object.defineProperty(window, "innerHeight", { configurable: true, value: 400 });
+        fireEvent(window, new Event("resize"));
+        flushRaf();
+        expect(currentProgress(indicator)).toBe(22);
+    });
+
+    it("removes scroll and resize listeners on unmount", () => {
+        const removeSpy = vi.spyOn(window, "removeEventListener");
+        const { unmount } = render(<Harness />);
+
+        unmount();
+
+        expect(removeSpy).toHaveBeenCalledWith("scroll", expect.any(Function));
+        expect(removeSpy).toHaveBeenCalledWith("resize", expect.any(Function));
+    });
+
+    it("uses one tick per article heading and ignores the title", () => {
+        render(<SectionHarness levels={[1, 2, 3]} />);
+
+        expect(navIndicator()).toBeInTheDocument();
+        expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+
+        ["Intro", "Setup", "Usage"].forEach((heading) => {
+            expect(screen.getByRole("button", { name: heading })).toBeInTheDocument();
+        });
+        expect(
+            screen.queryByRole("button", { name: "Article title" })
+        ).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /contents/i })).toBeInTheDocument();
+    });
+
+    it("re-discovers sections when the article content arrives later", () => {
+        const { rerender } = render(<SectionHarness headings={[]} />);
+        expect(screen.getByRole("progressbar")).toBeInTheDocument();
+
+        rerender(<SectionHarness headings={["Intro", "Setup"]} />);
+
+        expect(navIndicator()).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Intro" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Setup" })).toBeInTheDocument();
+    });
+
+    it("moves the active tick as the reader scrolls through sections", () => {
+        render(<SectionHarness />);
+
+        const intro = screen.getByRole("heading", { name: "Intro" });
+        const setup = screen.getByRole("heading", { name: "Setup" });
+        const usage = screen.getByRole("heading", { name: "Usage" });
+
+        const scrollToTops = (tops) => {
+            [intro, setup, usage].forEach((heading, index) =>
+                setHeadingTop(heading, tops[index])
+            );
+            fireEvent.scroll(window);
+            flushRaf();
+        };
+
+        scrollToTops([600, 1000, 1400]);
+        expect(screen.getByRole("button", { name: "Intro" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+        expect(tickBar(screen.getByRole("button", { name: "Intro" }))).toHaveClass(
+            "bg-black",
+            "w-[26px]"
+        );
+        expect(tickBar(screen.getByRole("button", { name: "Setup" }))).toHaveClass(
+            "bg-border",
+            "w-[16px]"
+        );
+
+        scrollToTops([-200, -100, 300]);
+        expect(screen.getByRole("button", { name: "Setup" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+        expect(tickBar(screen.getByRole("button", { name: "Intro" }))).toHaveClass(
+            "bg-border",
+            "w-[16px]"
+        );
+
+        scrollToTops([-200, -100, -50]);
+        expect(screen.getByRole("button", { name: "Usage" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+    });
+
+    it("counts a heading that stops a fraction of a pixel short of the navbar offset", () => {
+        render(<SectionHarness />);
+
+        setHeadingTop(screen.getByRole("heading", { name: "Intro" }), -500);
+        setHeadingTop(screen.getByRole("heading", { name: "Setup" }), 80.2);
+        setHeadingTop(screen.getByRole("heading", { name: "Usage" }), 900);
+        fireEvent.scroll(window);
+        flushRaf();
+
+        expect(screen.getByRole("button", { name: "Setup" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+    });
+
+    it("stays on a clicked section until the smooth scroll has finished", () => {
+        // Only the timers: requestAnimationFrame stays on the stub from beforeEach.
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        try {
+            render(<SectionHarness />);
+            const nav = navIndicator();
+            fireEvent.click(within(nav).getByRole("button", { name: "Usage" }));
+
+            // Part-way there: the scroll position alone would make "Setup" current.
+            setHeadingTop(screen.getByRole("heading", { name: "Intro" }), -500);
+            setHeadingTop(screen.getByRole("heading", { name: "Setup" }), 40);
+            setHeadingTop(screen.getByRole("heading", { name: "Usage" }), 900);
+            fireEvent.scroll(window);
+            flushRaf();
+            expect(within(nav).getByRole("button", { name: "Usage" })).toHaveAttribute("aria-current", "location");
+
+            // Once scrolling stops, the position takes over again.
+            act(() => {
+                vi.advanceTimersByTime(150);
+            });
+            flushRaf();
+            expect(within(nav).getByRole("button", { name: "Setup" })).toHaveAttribute("aria-current", "location");
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("reserves the bold width on every row, so the panel doesn't shift when the section changes", () => {
+        render(<SectionHarness />);
+
+        const row = within(navIndicator()).getByRole("button", { name: "Setup" });
+        expect(row).not.toHaveAttribute("aria-current");
+        const reserved = row.querySelector('[aria-hidden="true"].font-semibold');
+        expect(reserved).toHaveTextContent("Setup");
+        expect(reserved).toHaveClass("invisible");
+    });
+
+    it("scrolls to the heading when its tick is clicked", () => {
+        render(<SectionHarness />);
+
+        const setup = screen.getByRole("heading", { name: "Setup" });
+        const scrollSpy = vi.fn();
+        setup.scrollIntoView = scrollSpy;
+
+        fireEvent.click(screen.getByRole("button", { name: "Setup" }));
+
+        expect(scrollSpy).toHaveBeenCalledWith({
+            behavior: "smooth",
+            block: "start",
+        });
+        // Leaves the sticky navbar's 80px in view.
+        expect(setup.style.scrollMarginTop).toBe("80px");
+    });
+
+    it("keeps the evenly spaced ticks when there are fewer than two headings", () => {
+        render(<SectionHarness headings={["Intro"]} />);
+
+        const indicator = screen.getByRole("progressbar");
+        expect(ticksOf(indicator)).toHaveLength(15);
+        expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole("button", { name: /contents/i })
+        ).not.toBeInTheDocument();
+    });
+
+    it("shows the list icon on the Contents button, not the unknown-icon fallback", () => {
+        render(<SectionHarness />);
+
+        const icon = screen.getByRole("button", { name: /contents/i }).querySelector("svg");
+        expect(icon).toHaveClass("lucide-list");
+    });
+
+    it("draws one resting tick per section and lists every title in the panel", () => {
+        render(<SectionHarness />);
+
+        const nav = navIndicator();
+        expect(nav.querySelectorAll('[aria-hidden="true"] > span')).toHaveLength(3);
+        ["Intro", "Setup", "Usage"].forEach((heading) => {
+            expect(within(nav).getByRole("button", { name: heading })).toHaveTextContent(heading);
+        });
+    });
+
+    it("indents level 3 headings in the panel and the sheet", () => {
+        render(<SectionHarness levels={[2, 3, 2]} />);
+
+        const nav = navIndicator();
+        expect(within(nav).getByRole("button", { name: "Intro" })).toHaveClass("pl-[10px]");
+        expect(within(nav).getByRole("button", { name: "Setup" })).toHaveClass("pl-[24px]");
+
+        fireEvent.click(screen.getByRole("button", { name: /contents/i }));
+        const dialog = screen.getByRole("dialog");
+        expect(within(dialog).getByRole("button", { name: "Intro" })).not.toHaveClass("pl-[16px]");
+        expect(within(dialog).getByRole("button", { name: "Setup" })).toHaveClass("pl-[16px]");
+    });
+
+    it("marks the current section in the phone sheet", () => {
+        render(<SectionHarness />);
+
+        setHeadingTop(screen.getByRole("heading", { name: "Intro" }), -500);
+        setHeadingTop(screen.getByRole("heading", { name: "Setup" }), 40);
+        setHeadingTop(screen.getByRole("heading", { name: "Usage" }), 900);
+        fireEvent.scroll(window);
+        flushRaf();
+
+        fireEvent.click(screen.getByRole("button", { name: /contents/i }));
+        const dialog = screen.getByRole("dialog");
+        expect(within(dialog).getByRole("button", { name: "Setup" })).toHaveAttribute(
+            "aria-current",
+            "location"
+        );
+        expect(within(dialog).getByRole("button", { name: "Intro" })).not.toHaveAttribute(
+            "aria-current"
+        );
+    });
+
+    it("opens the phone Contents sheet, scrolls to a heading and closes it", () => {
+        render(<SectionHarness />);
+
+        const contentsButton = screen.getByRole("button", { name: /contents/i });
+        expect(contentsButton).toHaveAttribute("aria-expanded", "false");
+
+        fireEvent.click(contentsButton);
+        const dialog = screen.getByRole("dialog", { name: "Contents" });
+        expect(contentsButton).toHaveAttribute("aria-expanded", "true");
+
+        const setup = screen.getByRole("heading", { name: "Setup" });
+        const scrollSpy = vi.fn();
+        setup.scrollIntoView = scrollSpy;
+
+        fireEvent.click(within(dialog).getByRole("button", { name: "Setup" }));
+
+        expect(scrollSpy).toHaveBeenCalledTimes(1);
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("moves focus into the sheet and restores it to the Contents button", () => {
+        render(<SectionHarness />);
+
+        const contentsButton = screen.getByRole("button", { name: /contents/i });
+        fireEvent.click(contentsButton);
+
+        const closeButton = screen.getByRole("button", { name: "Close contents" });
+        expect(closeButton).toHaveFocus();
+
+        fireEvent.click(closeButton);
+        expect(contentsButton).toHaveFocus();
+    });
+
+    it("keeps Tab focus inside the phone sheet", () => {
+        render(<SectionHarness />);
+
+        fireEvent.click(screen.getByRole("button", { name: /contents/i }));
+
+        const closeButton = screen.getByRole("button", { name: "Close contents" });
+        const lastHeading = within(screen.getByRole("dialog")).getByRole("button", {
+            name: "Usage",
+        });
+
+        lastHeading.focus();
+        fireEvent.keyDown(document, { key: "Tab" });
+        expect(closeButton).toHaveFocus();
+
+        closeButton.focus();
+        fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+        expect(lastHeading).toHaveFocus();
+    });
+
+    it("closes the phone sheet with its button, the backdrop and Escape", () => {
+        render(<SectionHarness />);
+
+        const contentsButton = screen.getByRole("button", { name: /contents/i });
+
+        fireEvent.click(contentsButton);
+        fireEvent.click(
+            within(screen.getByRole("dialog")).getByRole("button", {
+                name: "Close contents",
+            })
+        );
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+        fireEvent.click(contentsButton);
+        const dialog = screen.getByRole("dialog", { name: "Contents" });
+        fireEvent.click(dialog.parentElement.firstElementChild);
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+        fireEvent.click(contentsButton);
+        expect(screen.getByRole("dialog", { name: "Contents" })).toBeInTheDocument();
+        fireEvent.keyDown(document, { key: "Escape" });
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+});

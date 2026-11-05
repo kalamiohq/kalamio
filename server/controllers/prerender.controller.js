@@ -50,6 +50,9 @@ export const renderMetaHtml = (meta) => {
   const d = escapeHtml(description);
   const img = escapeHtml(image);
   const u = escapeHtml(url);
+  const rssLink = meta.rssUrl
+    ? `<link rel="alternate" type="application/rss+xml" title="${escapeHtml(`${title || SITE_NAME} RSS Feed`)}" href="${escapeHtml(meta.rssUrl)}" />`
+    : '';
   // </script> inside JSON must be neutralised so it can't break out of the tag.
   const jsonLd = meta.jsonLd
     ? `<script type="application/ld+json">${JSON.stringify(meta.jsonLd).replace(/</g, '\\u003c')}</script>`
@@ -63,6 +66,7 @@ export const renderMetaHtml = (meta) => {
 <title>${t}</title>
 <meta name="description" content="${d}" />
 <link rel="canonical" href="${u}" />
+${rssLink}
 <meta property="og:site_name" content="${escapeHtml(SITE_NAME)}" />
 <meta property="og:type" content="${escapeHtml(type)}" />
 <meta property="og:title" content="${rawTitle}" />
@@ -127,12 +131,19 @@ export const blogMeta = (blog) => {
 
 export const userMeta = (user) => {
   const p = user.personal_info || {};
+  const isPublic =
+    user?.account_status?.status === 'active' &&
+    user?.privacy_settings?.show_profile === 'everyone';
   return {
     title: p.fullname || `@${p.username}`,
     description: (p.bio && p.bio.trim()) || `@${p.username} on ${SITE_NAME}`,
     image: cdnUrl(p.profile_img) || DEFAULT_IMAGE,
     url: `${ORIGIN}/user/${p.username}`,
     type: 'profile',
+    rssUrl:
+      isPublic && p.username
+        ? `${ORIGIN}/api/v1/feed/user/${encodeURIComponent(p.username)}.xml`
+        : undefined,
   };
 };
 
@@ -142,6 +153,10 @@ export const publicationMeta = (pub) => ({
   image: cdnUrl(pub.profile_photo || pub.banner) || DEFAULT_IMAGE,
   url: `${ORIGIN}/publication/${pub.slug}`,
   type: 'website',
+  rssUrl:
+    pub?.visibility === 'public' && pub.slug
+      ? `${ORIGIN}/api/v1/feed/publication/${encodeURIComponent(pub.slug)}.xml`
+      : undefined,
 });
 
 /**
@@ -165,13 +180,13 @@ export const resolveMeta = async (rawPath) => {
   }
   if (type === 'user') {
     const user = await User.findOne({ 'personal_info.username': id })
-      .select('personal_info.fullname personal_info.username personal_info.bio personal_info.profile_img')
+      .select('personal_info.fullname personal_info.username personal_info.bio personal_info.profile_img account_status.status privacy_settings.show_profile')
       .lean();
     return user ? userMeta(user) : null;
   }
   if (type === 'publication') {
     const pub = await Publication.findOne({ slug: id })
-      .select('title slug description banner profile_photo')
+      .select('title slug description banner profile_photo visibility')
       .lean();
     return pub ? publicationMeta(pub) : null;
   }

@@ -15,8 +15,8 @@ const BottomTabBar = () => {
     const [showFabMenu, setShowFabMenu] = useState(false);
     const [showComposer, setShowComposer] = useState(false);
 
-    // Live unread-message count — invalidated by the socket→cache bridge on new_message and by
-    // chat-view on mark-read (replaces the old local state + manual per-component socket listener).
+    // Live unread-message count — polled every 60s, and invalidated by chat-view on mark-read and by
+    // the socket→cache bridge on new_message while the socket is open.
     const { data: unreadMessages = 0 } = useUnreadMessages();
 
     const handleCreateTextPost = () => {

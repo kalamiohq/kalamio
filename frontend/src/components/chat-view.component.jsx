@@ -4,7 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserContext } from "../App";
 import { queryKeys } from "../common/queryKeys";
 import api from "../common/api";
-import { getSocket } from "../common/socket";
+import { acquireSocket, getSocket, releaseSocket } from "../common/socket";
+import { appendMessage, hasHistoryGap, mergeNewestMessages } from "../common/chat-messages";
 import MessageBubble from "./message-bubble.component";
 import Avatar from "./Avatar";
 import Icon from "./Icon";
@@ -29,6 +30,8 @@ const ChatView = ({ conversation, onConversationUpdate, onConversationCreated, o
     };
 
     const [messages, setMessages] = useState([]);
+    const messagesRef = useRef(messages);
+    messagesRef.current = messages;
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
@@ -105,12 +108,33 @@ const ChatView = ({ conversation, onConversationUpdate, onConversationCreated, o
     useEffect(() => {
         if (!access_token || !convId) return;
 
-        const socket = getSocket();
+        const socket = acquireSocket();
         if (!socket) return;
+
+        let cancelled = false;
+
+        // Nothing is pushed while the socket is down: Cloud Run cuts it every 5 minutes, and it closes
+        // when the tab is hidden or idle. So reload the newest page whenever it (re)connects.
+        const handleConnect = () => {
+            setIsTyping(false); // the stop_typing may have been missed
+            api.post("/messages", { conversation_id: convId, page: 1 })
+            .then(({ data }) => {
+                if (cancelled) return;
+                if (hasHistoryGap(messagesRef.current, data.messages)) {
+                    setPage(1);
+                    setHasMore(data.messages.length < data.totalDocs);
+                }
+                setMessages(prev => mergeNewestMessages(prev, data.messages));
+                if (data.messages.some(m => !m.read && resolveSenderId(m) !== currentUserId)) {
+                    markConversationRead(convId);
+                }
+            })
+            .catch(() => {});
+        };
 
         const handleNewMessage = (data) => {
             if (data.conversation_id === convId) {
-                setMessages(prev => [...prev, data.message]);
+                setMessages(prev => appendMessage(prev, data.message));
                 scrollToBottom();
 
                 // Mark as read immediately since we're in this chat
@@ -141,16 +165,20 @@ const ChatView = ({ conversation, onConversationUpdate, onConversationCreated, o
             }
         };
 
+        socket.on('connect', handleConnect);
         socket.on('new_message', handleNewMessage);
         socket.on('user_typing', handleTyping);
         socket.on('user_stop_typing', handleStopTyping);
         socket.on('messages_read', handleMessagesRead);
 
         return () => {
+            cancelled = true;
+            socket.off('connect', handleConnect);
             socket.off('new_message', handleNewMessage);
             socket.off('user_typing', handleTyping);
             socket.off('user_stop_typing', handleStopTyping);
             socket.off('messages_read', handleMessagesRead);
+            releaseSocket();
         };
     }, [convId, access_token]);
 
@@ -219,7 +247,7 @@ const ChatView = ({ conversation, onConversationUpdate, onConversationCreated, o
 
             const { data } = await api.post("/message/send", payload);
 
-            setMessages(prev => [...prev, data.message]);
+            setMessages(prev => appendMessage(prev, data.message));
             scrollToBottom();
 
             // If this was a new conversation, notify parent with the real conversation ID

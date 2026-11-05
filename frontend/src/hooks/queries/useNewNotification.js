@@ -6,7 +6,7 @@ import { UserContext } from '../../App';
 
 /**
  * Checks whether new (unread) notifications are available.
- * Polls every 60 seconds as a complement to real-time socket updates.
+ * Polls every 60 seconds. On the Messages page, where the socket is open, updates arrive sooner.
  *
  * Returns the full data object which contains `new_notification_available`.
  *

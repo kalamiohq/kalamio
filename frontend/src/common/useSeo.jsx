@@ -53,6 +53,22 @@ const upsertCanonical = (href) => {
   el.setAttribute("href", href);
 };
 
+const upsertRssAlternate = (href, title) => {
+  let el = document.head.querySelector('link[rel="alternate"][type="application/rss+xml"]');
+  if (!href) {
+    if (el) el.remove();
+    return;
+  }
+  if (!el) {
+    el = document.createElement("link");
+    el.setAttribute("rel", "alternate");
+    el.setAttribute("type", "application/rss+xml");
+    document.head.appendChild(el);
+  }
+  el.setAttribute("href", href);
+  if (title) el.setAttribute("title", title);
+};
+
 const setJsonLd = (data) => {
   let el = document.getElementById(JSONLD_ID);
   if (data) {
@@ -82,6 +98,8 @@ export const useSeo = ({
   type = "website",
   noindex = false,
   jsonLd = null,
+  rssUrl = undefined,
+  rssTitle = undefined,
 } = {}) => {
   const { pathname } = useLocation();
   // Stable dependency for the (rarely-changing) structured data object.
@@ -98,6 +116,7 @@ export const useSeo = ({
 
     upsertMeta("name", "description", desc);
     upsertCanonical(canonicalUrl);
+    upsertRssAlternate(rssUrl, rssTitle);
 
     // Open Graph
     upsertMeta("property", "og:site_name", SITE_NAME);
@@ -127,9 +146,13 @@ export const useSeo = ({
       document.title = SITE_NAME;
       // Structured data is page-specific — don't let it leak to the next route.
       setJsonLd(null);
+      // RSS discovery is page-specific too — remove it so a non-RSS route
+      // never inherits a stale alternate link from the previous route.
+      const rssEl = document.head.querySelector('link[rel="alternate"][type="application/rss+xml"]');
+      if (rssEl) rssEl.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, description, image, url, type, noindex, pathname, jsonLdKey]);
+  }, [title, description, image, url, type, noindex, pathname, jsonLdKey, rssUrl, rssTitle]);
 };
 
 /**

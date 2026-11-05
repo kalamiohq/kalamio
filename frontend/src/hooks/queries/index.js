@@ -5,6 +5,7 @@ export { default as useCategoryBlogs } from './useCategoryBlogs';
 export { default as useFollowingFeed } from './useFollowingFeed';
 export { default as useTrendingBlogs } from './useTrendingBlogs';
 export { default as useBlogDetail } from './useBlogDetail';
+export { default as useBlogActivity } from './useBlogActivity';
 export { default as useSimilarBlogs } from './useSimilarBlogs';
 export { default as useUserProfile } from './useUserProfile';
 export { default as useUserBlogs } from './useUserBlogs';

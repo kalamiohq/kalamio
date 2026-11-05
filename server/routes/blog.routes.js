@@ -3,6 +3,7 @@ import express from 'express';
 import { verifyJWT } from '../middleware/auth.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import validate from '../middleware/validate.js';
+import { apiLimiter } from '../middleware/rateLimiter.js';
 import { cacheResponse, invalidateCacheOnWrite } from '../middleware/cache.js';
 import { getBlogSchema, likeBlogSchema, deleteBlogSchema } from '../validators/schemas.js';
 
@@ -14,6 +15,7 @@ import {
     searchPosts,
     searchPostsCount,
     getPost,
+    getPostActivity,
     likePost,
     isLikedByUser,
     userWrittenPosts,
@@ -70,6 +72,9 @@ router.post("/create-text-post", verifyJWT, invalidateCacheOnWrite(postWriteTags
 // showed a filled heart (per-user status is uncached) with a stale count. Localhost has no Redis,
 // which is why this only ever reproduced on dev/prod. Narrow 'feed' tag: see /latest-blogs above.
 router.post("/like-blog", verifyJWT, validate(likeBlogSchema), invalidateCacheOnWrite(['feed']), asyncHandler(likePost));
+// Polled once a minute by signed-in readers. apiLimiter (per IP) runs before auth so floods of bad or
+// missing tokens are throttled too.
+router.post("/blog-activity", apiLimiter, verifyJWT, validate(getBlogSchema), asyncHandler(getPostActivity));
 router.post("/isliked-by-user", verifyJWT, asyncHandler(isLikedByUser));
 router.post("/batch-isliked", verifyJWT, asyncHandler(batchIsLiked));
 

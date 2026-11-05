@@ -11,13 +11,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../common/queryKeys";
 
-const CommentCard = ({ index, commentData, isTextPost = false, onReplyDeleted }) => {
-
-    // Guard: skip rendering if the comment author was deleted
-    if (!commentData.commented_by) {
+const CommentCard = (props) => {
+    // Guard before mounting the stateful card so its hooks always run in order.
+    if (!props.commentData.commented_by) {
         return null;
     }
 
+    return <CommentCardContent {...props} />;
+}
+
+const CommentCardContent = ({ index, commentData, isTextPost = false, onReplyDeleted }) => {
     let { commented_by: { _id: commented_by_id, personal_info: { profile_img, fullname, username: commented_by_username } }, commentedAt, comment, images, poll, _id, children } = commentData
 
     let { blog, blog: { comments, activity, activity: { total_parent_comments }, comments: { results: commentsArr }, author: { personal_info: { username: blog_author } } }, setBlog, setTotalParentCommentsLoaded } = useContext(BlogContext)

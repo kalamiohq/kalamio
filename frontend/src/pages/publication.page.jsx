@@ -96,12 +96,20 @@ const PublicationPage = () => {
             : publication.description)
         : undefined;
 
+    const apiOrigin = (import.meta.env.VITE_SERVER_DOMAIN || `${PRODUCTION_ORIGIN}/`).replace(/\/+$/, '');
+    const rssUrl =
+        slug && publication?.visibility === 'public'
+            ? `${apiOrigin}/api/v1/feed/publication/${encodeURIComponent(slug)}.xml`
+            : undefined;
+
     useSeo({
         title: publication?.title || 'Publication',
         description: seoDescription,
         image: publication?.profile_photo || publication?.banner || undefined,
         url: `${PRODUCTION_ORIGIN}/publication/${slug}`,
         type: 'website',
+        rssUrl,
+        rssTitle: publication?.title ? `${publication.title} RSS Feed` : undefined,
     });
 
     // 3 separate infinite queries for each tab
@@ -221,6 +229,17 @@ const PublicationPage = () => {
                                     </div>
                                 )}
                                 <div className="publication-header__actions">
+                                    {rssUrl && (
+                                        <a
+                                            href={rssUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn-light rounded-radius-md flex items-center gap-2"
+                                        >
+                                            <Icon name="rss" className="text-lg" />
+                                            RSS
+                                        </a>
+                                    )}
                                     <SubscribeButton
                                         publicationId={pubId}
                                         onSubscribeChange={handleSubscribeChange}

@@ -10,6 +10,7 @@ frontend/dist
 walkthrough_Auth_Lifeboard.md
 frontend/.htpasswd
 *.log
+*.timestamp-*.mjs
 .DS_Store
 Thumbs.db
 .vscode/

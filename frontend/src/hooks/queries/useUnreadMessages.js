@@ -6,7 +6,7 @@ import { UserContext } from '../../App';
 
 /**
  * Fetches the total count of unread messages for the current user.
- * Polls every 60 seconds as a complement to real-time socket updates.
+ * Polls every 60 seconds. On the Messages page, where the socket is open, updates arrive sooner.
  *
  * @returns {import('@tanstack/react-query').UseQueryResult<number>}
  */

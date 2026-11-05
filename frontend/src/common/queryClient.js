@@ -30,8 +30,8 @@ export const queryClient = new QueryClient({
       retry: retryQuery,               // Skip 4xx, back off on network/5xx (Axios handles 401)
       retryDelay,
       refetchOnWindowFocus: false,      // Don't refetch on tab focus — it re-renders feeds and
-                                        // visibly reloads images on every tab return. Realtime data
-                                        // (notifications, messages) stays fresh via sockets; feeds
+                                        // visibly reloads images on every tab return. Live badges
+                                        // (notifications, messages) poll on their own; feeds
                                         // refetch on mount/navigation and after staleTime.
       refetchOnReconnect: true,         // Refetch when coming back online
       throwOnError: false,              // Let components handle via isError

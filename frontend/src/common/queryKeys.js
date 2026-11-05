@@ -20,6 +20,7 @@ export const queryKeys = {
     category:     (tag)             => ['blogs', 'category', tag],
     following:    ()                => ['blogs', 'following'],
     detail:       (blogId)          => ['blogs', 'detail', blogId],
+    activity:     (blogId)          => ['blogs', 'activity', blogId],
     similar:      (blogId)          => ['blogs', 'similar', blogId],
     search:       (query)           => ['blogs', 'search', query],
     userWritten:  (filters)         => ['blogs', 'user-written', filters],

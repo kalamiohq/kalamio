@@ -4,7 +4,7 @@ import ScrollToTop from "./components/scroll-to-top.component";
 import { createContext, useEffect, useState, lazy, Suspense } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { lookInSession } from "./common/session";
-import { getSocket, disconnectSocket, connectSocketToQueryCache } from "./common/socket";
+import { disconnectSocket } from "./common/socket";
 import { Toaster } from 'react-hot-toast';
 import Loader from "./components/loader.component";
 import CustomTooltip from "./components/CustomTooltip";
@@ -133,24 +133,12 @@ const App = () => {
         }
     }, [userAuth.access_token, queryClient]);
 
-    // Real-time: connect the socket on login, wire it to the query cache (so badges/feeds update
-    // live), and keep the context-based Activity flag live too. Disconnect on logout.
+    // Screens open the socket when they need it (see common/socket.js); logging out closes it.
     useEffect(() => {
         if (!userAuth.access_token) {
             disconnectSocket();
-            return;
         }
-
-        const socket = getSocket();
-        if (!socket) return;
-
-        // Every Activity badge now reads the server-backed unread query, which this bridge
-        // invalidates on `new_notification` — so arrivals AND removals both land. There used to be
-        // an extra listener here that latched userAuth.new_notification_available to true; it could
-        // only ever turn the dot ON, so revoking a like (which deletes the notification) left the
-        // mobile/you-page dot stuck until the tab was visited.
-        connectSocketToQueryCache(socket, queryClient);
-    }, [userAuth.access_token, queryClient]);
+    }, [userAuth.access_token]);
 
     return (
         <ThemeContext.Provider value={{ theme, setTheme }}>
