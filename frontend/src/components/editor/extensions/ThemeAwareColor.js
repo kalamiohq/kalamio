@@ -1,8 +1,8 @@
-import Color from '@tiptap/extension-color';
+import { Color } from '@tiptap/extension-text-style';
 import { isThemeText } from '../utils/themeColor';
 
 /**
- * The stock `@tiptap/extension-color`, hardened so pasted text doesn't carry a fixed black/white
+ * The stock Tiptap `Color` extension (from `@tiptap/extension-text-style`), hardened so pasted text doesn't carry a fixed black/white
  * colour that fights the platform theme. It overrides the `color` global attribute at BOTH ends:
  *
  *   • parseHTML — paste / HTML load: drop the colour when it's an achromatic near-black/near-white

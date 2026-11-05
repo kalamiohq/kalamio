@@ -1,17 +1,12 @@
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import Highlight from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
-import Link from '@tiptap/extension-link';
-import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
-import TableHeader from '@tiptap/extension-table-header';
-import Mention from '@tiptap/extension-mention';
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import { Mention } from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
 import Youtube from '@tiptap/extension-youtube';
-import TextStyle from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import ThemeAwareColor from './ThemeAwareColor';
 import Dropcursor from '@tiptap/extension-dropcursor';
 import { common, createLowlight } from 'lowlight';
@@ -32,13 +27,23 @@ import AiSuggestion from './AiSuggestion';
 export function getExtensions({ mentionSuggestion } = {}) {
   return [
     // ── Core ────────────────────────────────────────────────────────────
+    // v3's StarterKit also bundles Underline and Link, so Link is configured here instead of as a
+    // separate extension. trailingNode is off: v2 never forced an empty paragraph at the end of the
+    // doc, and turning it on would change what gets saved.
     StarterKit.configure({
       codeBlock: false,    // Replaced by CodeBlockWithLanguage
       dropcursor: false,   // Replaced by standalone Dropcursor config below
+      trailingNode: false,
+      link: {
+        openOnClick: false,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer nofollow',
+          target: '_blank',
+        },
+      },
     }),
 
     // ── Text formatting ─────────────────────────────────────────────────
-    Underline,
     Highlight.configure({ multicolor: true }),
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     // ThemeAwareColor = the stock Color extension that drops pasted black/white so text follows the
@@ -46,15 +51,6 @@ export function getExtensions({ mentionSuggestion } = {}) {
     // ever arrives via paste). See extensions/ThemeAwareColor.
     ThemeAwareColor,
     TextStyle,
-
-    // ── Links ───────────────────────────────────────────────────────────
-    Link.configure({
-      openOnClick: false,
-      HTMLAttributes: {
-        rel: 'noopener noreferrer nofollow',
-        target: '_blank',
-      },
-    }),
 
     // ── Images ──────────────────────────────────────────────────────────
     ImageWithCaption,

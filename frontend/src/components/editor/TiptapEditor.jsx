@@ -102,6 +102,9 @@ const TiptapEditor = ({ content, onUpdate, onEditorReady, saveStatus, savedAt })
   );
 
   const editor = useEditor({
+    // v3 stops re-rendering on every transaction. The toolbar reads editor.isActive()/can() while
+    // rendering, so keep the v2 behaviour or the active/disabled states go stale.
+    shouldRerenderOnTransaction: true,
     extensions: getExtensions({ mentionSuggestion: mentionSuggestionConfig }),
     content: content || { type: 'doc', content: [{ type: 'paragraph' }] },
     onUpdate: handleUpdate,

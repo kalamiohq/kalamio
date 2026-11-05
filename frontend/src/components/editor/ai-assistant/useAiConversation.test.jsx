@@ -30,7 +30,7 @@ beforeEach(() => {
   // jsdom's AbortSignal isn't accepted by Node's fetch; browsers are unaffected.
   const mswFetch = globalThis.fetch
   vi.stubGlobal('fetch', (url, init = {}) => mswFetch(url, { ...init, signal: undefined }))
-  editor = new Editor({ extensions: [StarterKit], content: '<h2>Intro</h2><p>Hello.</p>' })
+  editor = new Editor({ extensions: [StarterKit.configure({ trailingNode: false })], content: '<h2>Intro</h2><p>Hello.</p>' })
 })
 afterEach(() => { vi.unstubAllGlobals(); editor.destroy() })
 
