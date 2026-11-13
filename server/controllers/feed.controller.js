@@ -1,7 +1,7 @@
 import Post from '../Schema/Post.js';
 import User from '../Schema/User.js';
 import Publication from '../Schema/Publication.js';
-import { escapeHtml, ORIGIN } from './prerender.controller.js';
+import { escapeHtml, isPublicProfile, isPublicPublication, ORIGIN } from './prerender.controller.js';
 
 const DEFAULT_DESCRIPTION = 'Latest articles on Kalamio.';
 
@@ -83,11 +83,7 @@ export const userFeed = async (req, res) => {
     .select('personal_info.fullname personal_info.username personal_info.bio account_status.status privacy_settings.show_profile')
     .lean();
 
-  if (
-    !user ||
-    user.account_status?.status !== 'active' ||
-    user.privacy_settings?.show_profile !== 'everyone'
-  ) {
+  if (!user || !isPublicProfile(user)) {
     return res.status(404).send('Not found');
   }
 
@@ -114,7 +110,7 @@ export const publicationFeed = async (req, res) => {
     .select('title slug description visibility')
     .lean();
 
-  if (!publication || publication.visibility !== 'public') {
+  if (!publication || !isPublicPublication(publication)) {
     return res.status(404).send('Not found');
   }
 

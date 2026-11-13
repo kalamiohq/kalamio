@@ -145,6 +145,46 @@ describe('user feed endpoint — GET /api/v1/feed/user/:username.xml', () => {
     expect(Post.find().limit).toHaveBeenCalledWith(20)
   })
 
+  // .lean() skips schema defaults, and older accounts don't store these fields.
+  it('serves a feed for an older profile that has no stored status or privacy fields', async () => {
+    User.findOne.mockReturnValue(
+      findOneChain({ _id: 'userId1', personal_info: { username: 'ada', fullname: 'Ada' } }),
+    )
+    Post.find.mockReturnValue(findChain([]))
+
+    const res = await request(makeApp()).get('/api/v1/feed/user/ada.xml')
+
+    expect(res.status).toBe(200)
+  })
+
+  it('still returns 404 for a logged-in-only profile with no stored status', async () => {
+    User.findOne.mockReturnValue(
+      findOneChain({
+        _id: 'userId1',
+        personal_info: { username: 'ada', fullname: 'Ada' },
+        privacy_settings: { show_profile: 'logged_in' },
+      }),
+    )
+
+    const res = await request(makeApp()).get('/api/v1/feed/user/ada.xml')
+
+    expect(res.status).toBe(404)
+  })
+
+  it('still returns 404 for a deactivated profile with no stored privacy settings', async () => {
+    User.findOne.mockReturnValue(
+      findOneChain({
+        _id: 'userId1',
+        personal_info: { username: 'ada', fullname: 'Ada' },
+        account_status: { status: 'deactivated' },
+      }),
+    )
+
+    const res = await request(makeApp()).get('/api/v1/feed/user/ada.xml')
+
+    expect(res.status).toBe(404)
+  })
+
   it('returns 404 for an unknown user', async () => {
     User.findOne.mockReturnValue(findOneChain(null))
     const res = await request(makeApp()).get('/api/v1/feed/user/missing.xml')
@@ -242,6 +282,15 @@ describe('publication feed endpoint — GET /api/v1/feed/publication/:slug.xml',
     expect(Post.find).toHaveBeenCalledWith({ publication: 'pubId1', draft: false, type: 'blog' })
     expect(Post.find().sort).toHaveBeenCalledWith({ publishedAt: -1 })
     expect(Post.find().limit).toHaveBeenCalledWith(20)
+  })
+
+  it('serves a feed for an older publication that has no stored visibility', async () => {
+    Publication.findOne.mockReturnValue(findOneChain({ _id: 'pubId1', slug: 'my-pub', title: 'My Pub' }))
+    Post.find.mockReturnValue(findChain([]))
+
+    const res = await request(makeApp()).get('/api/v1/feed/publication/my-pub.xml')
+
+    expect(res.status).toBe(200)
   })
 
   it('returns 404 for an unknown publication', async () => {

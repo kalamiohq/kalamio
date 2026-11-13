@@ -129,11 +129,16 @@ export const blogMeta = (blog) => {
   };
 };
 
+// These fields have schema defaults, but .lean() doesn't apply them and older documents don't
+// store them, so a missing value means the default.
+export const isPublicProfile = (user) =>
+  (user?.account_status?.status ?? 'active') === 'active' &&
+  (user?.privacy_settings?.show_profile ?? 'everyone') === 'everyone';
+
+export const isPublicPublication = (pub) => (pub?.visibility ?? 'public') === 'public';
+
 export const userMeta = (user) => {
   const p = user.personal_info || {};
-  const isPublic =
-    user?.account_status?.status === 'active' &&
-    user?.privacy_settings?.show_profile === 'everyone';
   return {
     title: p.fullname || `@${p.username}`,
     description: (p.bio && p.bio.trim()) || `@${p.username} on ${SITE_NAME}`,
@@ -141,7 +146,7 @@ export const userMeta = (user) => {
     url: `${ORIGIN}/user/${p.username}`,
     type: 'profile',
     rssUrl:
-      isPublic && p.username
+      isPublicProfile(user) && p.username
         ? `${ORIGIN}/api/v1/feed/user/${encodeURIComponent(p.username)}.xml`
         : undefined,
   };
@@ -154,7 +159,7 @@ export const publicationMeta = (pub) => ({
   url: `${ORIGIN}/publication/${pub.slug}`,
   type: 'website',
   rssUrl:
-    pub?.visibility === 'public' && pub.slug
+    isPublicPublication(pub) && pub.slug
       ? `${ORIGIN}/api/v1/feed/publication/${encodeURIComponent(pub.slug)}.xml`
       : undefined,
 });
