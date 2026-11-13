@@ -1,6 +1,22 @@
 import { memo, useCallback } from 'react';
-import { BubbleMenu } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import ToolbarButton from './ToolbarButton';
+
+// Both of these are module-level on purpose: the v3 BubbleMenu re-dispatches a transaction whenever
+// `options` or `shouldShow` change identity, and the editor re-renders on every transaction, so
+// inline versions loop forever ("Maximum update depth exceeded").
+const BUBBLE_MENU_OPTIONS = { placement: 'top' };
+
+const shouldShowBubbleMenu = ({ editor: ed, from, to }) => {
+  // On mobile the always-visible sticky toolbar handles formatting, so suppress the bubble menu —
+  // it would otherwise collide with (and be covered by) the native text-selection toolbar.
+  if (typeof window !== 'undefined' && window.innerWidth < 768) return false;
+  // Don't show on image nodes or empty selections
+  if (from === to) return false;
+  if (ed.isActive('image')) return false;
+  if (ed.isActive('codeBlock')) return false;
+  return true;
+};
 
 const BubbleMenuComponent = ({ editor }) => {
   // Hooks must run unconditionally — declare the callback before any early return.
@@ -31,21 +47,9 @@ const BubbleMenuComponent = ({ editor }) => {
   return (
     <BubbleMenu
       editor={editor}
-      tippyOptions={{
-        duration: 150,
-        placement: 'top',
-        animation: 'shift-toward-subtle',
-      }}
-      shouldShow={({ editor: ed, from, to }) => {
-        // On mobile the always-visible sticky toolbar handles formatting, so suppress the bubble menu —
-        // it would otherwise collide with (and be covered by) the native text-selection toolbar.
-        if (typeof window !== 'undefined' && window.innerWidth < 768) return false;
-        // Don't show on image nodes or empty selections
-        if (from === to) return false;
-        if (ed.isActive('image')) return false;
-        if (ed.isActive('codeBlock')) return false;
-        return true;
-      }}
+      options={BUBBLE_MENU_OPTIONS}
+      className="bubble-menu-popper"
+      shouldShow={shouldShowBubbleMenu}
     >
       <div className="bubble-menu">
         <ToolbarButton
