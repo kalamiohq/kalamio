@@ -35,6 +35,20 @@ describe('AiProposalCard (inline review)', () => {
     expect(onCancel).not.toHaveBeenCalled()
   })
 
+  it('does not add an empty trailing paragraph when an edited proposal ends in a heading', () => {
+    const { onApply } = renderCard({ proposal: proposal('append', 'end') })
+    act(() => { previewEditor().commands.setContent('<p>Intro</p><h2>Conclusion</h2>', true) })
+    fireEvent.click(apply())
+    expect(onApply).toHaveBeenCalledWith('<p>Intro</p><h2>Conclusion</h2>', true)
+  })
+
+  it('keeps a heading-only proposal heading-only after an edit', () => {
+    const { onApply } = renderCard({ proposal: { ...proposal('append', 'end'), content: '<h2>Summary</h2>' } })
+    act(() => { previewEditor().commands.insertContentAt(previewEditor().state.doc.content.size - 1, ' of results') })
+    fireEvent.click(apply())
+    expect(onApply).toHaveBeenCalledWith('<h2>Summary of results</h2>', true)
+  })
+
   it('passes edited=false when applied as-is', () => {
     const { onApply } = renderCard({ proposal: proposal('append', 'end') })
     fireEvent.click(apply())

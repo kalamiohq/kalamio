@@ -49,7 +49,7 @@ const AiProposalCard = ({ proposal, state, removal = { stale: false, counts: {},
 
     // The editable preview: a small TipTap editor, styled as green "added" text.
     const editor = useEditor({
-        extensions: [StarterKit.configure({ link: { openOnClick: false, autolink: false } })],
+        extensions: [StarterKit.configure({ trailingNode: false, link: { openOnClick: false, autolink: false } })],
         content: proposal.content,
         editable: pending,
         editorProps: {
