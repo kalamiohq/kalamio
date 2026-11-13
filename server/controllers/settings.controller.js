@@ -118,7 +118,12 @@ export const updatePrivacySettings = async (req, res) => {
             return res.status(400).json({ error: "privacy_settings must be an object" });
         }
 
-        for (const key of Object.keys(privacy_settings)) {
+        const keys = Object.keys(privacy_settings);
+        if (keys.length === 0) {
+            return res.status(400).json({ error: "privacy_settings must not be empty" });
+        }
+
+        for (const key of keys) {
             if (!VALID_PRIVACY_KEYS.has(key)) {
                 return res.status(400).json({ error: `Unknown privacy key: ${key}` });
             }
@@ -130,16 +135,26 @@ export const updatePrivacySettings = async (req, res) => {
         if (privacy_settings.who_can_message === 'connections') privacy_settings.who_can_message = 'nobody';
         if (privacy_settings.show_profile === 'connections') privacy_settings.show_profile = 'logged_in';
 
-        if (privacy_settings.who_can_message && !VALID_MESSAGE_OPTIONS.includes(privacy_settings.who_can_message)) {
+        // A key that's sent must hold a valid value: null or '' would clear the stored setting.
+        if ('who_can_message' in privacy_settings && !VALID_MESSAGE_OPTIONS.includes(privacy_settings.who_can_message)) {
             return res.status(400).json({ error: "Invalid value for who_can_message" });
         }
-        if (privacy_settings.show_profile && !VALID_PROFILE_OPTIONS.includes(privacy_settings.show_profile)) {
+        if ('show_profile' in privacy_settings && !VALID_PROFILE_OPTIONS.includes(privacy_settings.show_profile)) {
             return res.status(400).json({ error: "Invalid value for show_profile" });
         }
+        if ('show_read_count' in privacy_settings && typeof privacy_settings.show_read_count !== 'boolean') {
+            return res.status(400).json({ error: "Invalid value for show_read_count" });
+        }
+
+        // Set only the fields that were sent. Replacing the whole privacy_settings object would drop
+        // any field left out, and a missing show_profile counts as 'everyone' (isPublicProfile), so a
+        // partial request could make a logged-in-only profile's RSS feed public.
+        const update = {};
+        for (const key of keys) update[`privacy_settings.${key}`] = privacy_settings[key];
 
         const updated = await User.findByIdAndUpdate(
             req.user,
-            { $set: { privacy_settings } },
+            { $set: update },
             { new: true }
         ).select('privacy_settings');
 
