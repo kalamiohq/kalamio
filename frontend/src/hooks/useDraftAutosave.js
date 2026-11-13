@@ -196,6 +196,22 @@ export const useDraftAutosave = ({ draftKey, blog, enabled, serverEnabled = fals
             serverErrorRef.current = null;
             serverRetryCountRef.current = 0;
             clearTimeout(serverRetryTimerRef.current);
+
+            // The content moved on while this save was in flight. Two things could lose those edits:
+            //  - the change detector compared them with the baseline from BEFORE this save, so an edit
+            //    back to it (an undo right after an autosave fired) looked like nothing to push;
+            //  - their local snapshot names that old baseline as its base, so a reopen would read it as
+            //    "the server moved on elsewhere" and drop it.
+            // So queue a follow-up push, and re-stamp the local snapshot against what the server holds now.
+            const current = blogRef.current;
+            const currentSig = blogSignature(current);
+            if (currentSig !== sig) {
+                serverTrailingRef.current = true;
+                if (keyRef.current && blogIsMeaningful(current)) {
+                    await saveLocalDraft(snapshotOf(keyRef.current, current));
+                    localBaselineRef.current = currentSig;
+                }
+            }
         } catch (err) {
             // Network / 5xx = transient → keep local, flag offline, retry with backoff (and on reconnect).
             // 4xx = rejected → the server won't accept this content (e.g. too large); don't hammer it,
