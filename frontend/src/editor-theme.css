@@ -1527,7 +1527,11 @@
 [data-theme="light"] :is(.blog-page-content, .tiptap-content) .hljs-deletion { color: #b31d28; background: #ffeef0; }
 
 /* ── YouTube Embed (official extension) ─────────────────────── */
-.tiptap-content .youtube-embed {
+/* The extension renders <div data-youtube-video><iframe class="youtube-embed"></div>: the
+   configured class lands on the iframe, not the wrapper. So the 16:9 box goes on the wrapper.
+   Putting `height: 0` + padding on the iframe itself left it a 0px-tall content box, so the
+   video never showed in the editor. Articles render YouTube through LazyEmbed, not these rules. */
+.tiptap-content [data-youtube-video] {
   position: relative;
   padding-bottom: 56.25%; /* 16:9 */
   height: 0;
@@ -1536,7 +1540,11 @@
   border-radius: var(--radius-md);
 }
 
-.tiptap-content .youtube-embed iframe {
+.tiptap-content [data-youtube-video].ProseMirror-selectednode {
+  box-shadow: 0 0 0 3px rgb(var(--c-brand) / 0.4);
+}
+
+.tiptap-content [data-youtube-video] iframe {
   position: absolute;
   top: 0;
   left: 0;
