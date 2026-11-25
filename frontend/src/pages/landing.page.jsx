@@ -212,7 +212,6 @@ const LandingPage = () => {
             <header className="landing__header">
                 <Link to="/" className="landing__logo" aria-label="Kalamio home">
                     <Logo title={null} />
-                    <span className="landing__beta">BETA</span>
                 </Link>
                 <div className="landing__header-actions">
                     <button

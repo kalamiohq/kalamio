@@ -109,7 +109,6 @@ const MobileTopBar = () => {
                     ) : (
                         <Link to="/" state={{ resetScroll: true }} className="mobile-top-bar__brand flex items-center">
                             <Logo />
-                            <span className="beta-badge ml-2">BETA</span>
                         </Link>
                     )}
 
