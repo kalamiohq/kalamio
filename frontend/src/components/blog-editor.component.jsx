@@ -585,7 +585,7 @@ const BlogEditor = () => {
         <>
             <nav className="navbar">
                 <Link to="/" className="flex-none" >
-                    <Logo wordmark={false} className="h-8 w-8 md:h-9 md:w-9" />
+                    <Logo wordmark={false} className="h-8 w-8 md:h-9 md:w-9 text-black" />
                 </Link>
                 <p className="max-md:hidden text-2xl text-black line-clamp-1 w-full font-medium">
                     { title.length ? title : "New Blog" }
