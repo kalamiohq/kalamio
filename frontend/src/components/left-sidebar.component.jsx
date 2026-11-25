@@ -195,7 +195,6 @@ const LeftSidebar = () => {
                     {/* Logo */}
                     <Link to="/" state={{ resetScroll: true }} className="left-sidebar__logo flex items-center">
                         <Logo />
-                        <span className="beta-badge ml-2">BETA</span>
                     </Link>
 
                     {/* Navigation */}
