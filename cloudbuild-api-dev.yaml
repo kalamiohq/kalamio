@@ -26,11 +26,18 @@ steps:
         'us-central1-docker.pkg.dev/$PROJECT_ID/kalamio/backend-dev:$COMMIT_SHA'
       ]
 
-  # Step 4: Deploy to Cloud Run
+  # Step 4: Deploy to Cloud Run, unless a newer commit on main supersedes this one: builds run
+  # in parallel, and an older one can finish last. .cloudbuild/is-superseded.sh exits 0 when a
+  # later commit changes server/ (the trigger's included files), whose own build deploys
+  # instead; the step then ends and the build still passes. The args after the script go to
+  # gcloud ('gcloud' is bash's $0; $$ is Cloud Build's escape for $).
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+    entrypoint: bash
     args:
       [
+        '-c',
+        'if bash .cloudbuild/is-superseded.sh "$COMMIT_SHA" server/; then exit 0; fi; exec gcloud "$$@"',
+        'gcloud',
         'run',
         'deploy',
         'kalamio-api-development',
