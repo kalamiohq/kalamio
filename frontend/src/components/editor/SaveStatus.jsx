@@ -3,15 +3,16 @@
 // aria-live so screen readers announce the change without stealing focus.
 import { useEffect, useState } from 'react';
 import Icon from '../Icon';
+import { getRelativeTime } from '../../common/date';
 
+// Seconds for the first minute, so a fresh autosave reads "12s ago". After that, the shared
+// getRelativeTime: minutes, hours, days, then a short date ("24 Oct") from a week on.
 const relTime = (ts) => {
     if (!ts) return '';
     const s = Math.floor((Date.now() - ts) / 1000);
     if (s < 5) return 'just now';
     if (s < 60) return `${s}s ago`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}m ago`;
-    return `${Math.floor(m / 60)}h ago`;
+    return getRelativeTime(ts);
 };
 
 const SaveStatus = ({ status, savedAt }) => {
