@@ -59,7 +59,7 @@ const Navbar = () => {
             <nav className="navbar z-50">
 
                 <Link to="/" state={{ resetScroll: true }} className="flex-none flex items-center gap-2">
-                    <Logo wordmark={false} className="h-8 w-8" />
+                    <Logo wordmark={false} className="h-8 w-8 text-black" />
                     <span className="beta-badge">BETA</span>
                 </Link>
 
