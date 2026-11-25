@@ -295,11 +295,6 @@
         width: auto;
     }
 
-    .beta-badge {
-        @apply bg-kalamio/10 text-kalamio-text text-[10px] font-bold px-1.5 py-0.5 rounded-full
-               border border-kalamio/20 leading-none;
-    }
-
     /* ── Inputs ──────────────────────────────────── */
     .input-box {
         @apply w-[100%] rounded-radius-md p-4 bg-grey pl-12 border border-border
@@ -9290,18 +9285,6 @@
     height: clamp(20px, 3.6vmin, 26px);
     color: rgb(var(--c-black));
 }
-.landing__beta {
-    background: rgb(var(--c-kalamio) / 0.1);
-    color: rgb(var(--c-kalamio-text));
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 999px;
-    margin-left: 8px;
-    margin-top: 4px;
-    border: 1px solid rgb(var(--c-kalamio) / 0.2);
-    line-height: 1;
-}
 .landing__header-actions {
     display: flex;
     align-items: center;
@@ -9634,14 +9617,10 @@
     .landing__hint { display: none; }
 }
 
-/* Narrow-phone guard: the header's min-content width is ~343px, so below ~360px
-   the Get-started CTA gets clipped by the page's overflow:hidden (which can never
-   scroll). Shed "Sign in" first, then the BETA pill for fold-cover widths. */
+/* Narrow-phone guard: the page's overflow:hidden can never scroll, so on narrow
+   phones the header would clip the Get-started CTA. Shed "Sign in" to make room. */
 @media (max-width: 420px) {
     .landing__header { padding: 0 12px; }
     .landing__signin { display: none; }
-}
-@media (max-width: 340px) {
-    .landing__beta { display: none; }
 }
 
