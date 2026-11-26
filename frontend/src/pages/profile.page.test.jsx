@@ -66,30 +66,33 @@ const renderProfile = (profile) => {
   );
 };
 
-describe("profile page RSS link", () => {
+const rssLink = () =>
+  document.head.querySelector('link[rel="alternate"][type="application/rss+xml"]');
+
+describe("profile page RSS feed", () => {
   beforeEach(() => {
     useUserProfile.mockReset();
     useUserBlogs.mockReset();
+    rssLink()?.remove();
   });
 
-  it("shows an RSS link for a public active profile", async () => {
+  it("advertises the feed in <head> for a public active profile, without a visible button", async () => {
     renderProfile(publicProfile);
-    await waitFor(() => expect(screen.getByText("RSS")).toBeInTheDocument());
-    expect(screen.getByRole("link", { name: /rss/i })).toHaveAttribute(
-      "href",
-      expect.stringContaining("/api/v1/feed/user/ada.xml"),
+    await waitFor(() =>
+      expect(rssLink()).toHaveAttribute("href", expect.stringContaining("/api/v1/feed/user/ada.xml")),
     );
+    expect(screen.queryByText("RSS")).not.toBeInTheDocument();
   });
 
-  it("does not show an RSS link for a logged-in-only profile", async () => {
+  it("does not advertise a feed for a logged-in-only profile", async () => {
     renderProfile(privateProfile);
     await waitFor(() => expect(screen.getByText("@ada")).toBeInTheDocument());
-    expect(screen.queryByText("RSS")).not.toBeInTheDocument();
+    expect(rssLink()).toBeNull();
   });
 
-  it("does not show an RSS link for a deactivated profile", async () => {
+  it("does not advertise a feed for a deactivated profile", async () => {
     renderProfile(deactivatedProfile);
     await waitFor(() => expect(screen.getByText("@ada")).toBeInTheDocument());
-    expect(screen.queryByText("RSS")).not.toBeInTheDocument();
+    expect(rssLink()).toBeNull();
   });
 });
