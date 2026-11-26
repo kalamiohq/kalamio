@@ -229,17 +229,6 @@ const PublicationPage = () => {
                                     </div>
                                 )}
                                 <div className="publication-header__actions">
-                                    {rssUrl && (
-                                        <a
-                                            href={rssUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="btn-light rounded-radius-md flex items-center gap-2"
-                                        >
-                                            <Icon name="rss" className="text-lg" />
-                                            RSS
-                                        </a>
-                                    )}
                                     <SubscribeButton
                                         publicationId={pubId}
                                         onSubscribeChange={handleSubscribeChange}

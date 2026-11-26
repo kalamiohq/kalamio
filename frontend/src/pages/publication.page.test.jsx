@@ -57,23 +57,26 @@ const renderPublication = (publication) => {
   );
 };
 
-describe("publication page RSS link", () => {
+const rssLink = () =>
+  document.head.querySelector('link[rel="alternate"][type="application/rss+xml"]');
+
+describe("publication page RSS feed", () => {
   beforeEach(() => {
     post.mockReset();
+    rssLink()?.remove();
   });
 
-  it("shows an RSS link for a public publication", async () => {
+  it("advertises the feed in <head> for a public publication, without a visible button", async () => {
     renderPublication(publicPublication);
-    await waitFor(() => expect(screen.getByText("RSS")).toBeInTheDocument());
-    expect(screen.getByRole("link", { name: /rss/i })).toHaveAttribute(
-      "href",
-      expect.stringContaining("/api/v1/feed/publication/my-pub.xml"),
+    await waitFor(() =>
+      expect(rssLink()).toHaveAttribute("href", expect.stringContaining("/api/v1/feed/publication/my-pub.xml")),
     );
+    expect(screen.queryByText("RSS")).not.toBeInTheDocument();
   });
 
-  it("does not show an RSS link for a private publication", async () => {
+  it("does not advertise a feed for a private publication", async () => {
     renderPublication(privatePublication);
     await waitFor(() => expect(screen.getByText("My Pub")).toBeInTheDocument());
-    expect(screen.queryByText("RSS")).not.toBeInTheDocument();
+    expect(rssLink()).toBeNull();
   });
 });

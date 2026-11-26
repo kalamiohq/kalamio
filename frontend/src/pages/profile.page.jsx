@@ -226,17 +226,6 @@ const ProfilePage = () => {
                             </button>
                         </div>
                         )}
-                        {rssUrl && (
-                            <a
-                                href={rssUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-light rounded-radius-md flex items-center gap-2"
-                            >
-                                <Icon name="rss" className="text-xl" />
-                                RSS
-                            </a>
-                        )}
                     </div>
 
                     <AboutUser
