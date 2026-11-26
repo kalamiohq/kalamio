@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import Logo, { KALAMIO_ORANGE } from "../components/Logo";
 
@@ -8,6 +9,15 @@ const DIGITS = "M186.76 144Q167.67 144 153.85 134.95Q140.02 125.9 132.66 109.69Q
 const FULL_STOP = { cx: 402.17, cy: 124.71, r: 17.9 };
 
 const PageNotFound = () => {
+    const [searchQuery, setSearchQuery] = useState("");
+    const navigate = useNavigate();
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        const query = searchQuery.trim();
+        // Encode: raw queries containing /, #, ? or % break the :query route param
+        if (query.length) navigate(`/search/${encodeURIComponent(query)}`);
+    };
 
     return(
         <section className="h-cover relative p-10 flex flex-col items-center gap-12 text-center">
@@ -20,9 +30,22 @@ const PageNotFound = () => {
             <div>
                 <h1 className="text-4xl font-bold font-display mb-4">Page not found</h1>
                 <p className="text-dark-grey text-xl leading-7 max-w-md mx-auto">
-                    The page you're looking for doesn't exist. Head back to the <Link to="/" className="text-black font-semibold hover:underline">home page</Link>
+                    The page you're looking for doesn't exist.
                 </p>
             </div>
+
+            <form role="search" onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
+                <label htmlFor="not-found-search" className="sr-only">Search stories</label>
+                <input
+                    id="not-found-search"
+                    type="text"
+                    placeholder="Search stories"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-grey p-4 pl-12 pr-6 rounded-full placeholder:text-dark-grey border border-transparent focus:border-border focus:bg-surface transition-all"
+                />
+                <Icon name="search" className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-dark-grey pointer-events-none" />
+            </form>
 
             <Link to="/" className="btn-brand py-3 px-8 flex items-center gap-2">
                 <Icon name="home" className="text-xl" />
