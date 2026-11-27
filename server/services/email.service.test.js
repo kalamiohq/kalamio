@@ -5,7 +5,7 @@ import { readFileSync } from 'fs';
 const { sendMail } = vi.hoisted(() => ({ sendMail: vi.fn() }));
 vi.mock('nodemailer', () => ({ default: { createTransport: () => ({ sendMail }) } }));
 
-import { sendVerificationEmail, sendPasswordResetEmail, buildOtpEmailHtml } from './email.service.js';
+import { sendVerificationEmail, sendPasswordResetEmail, buildOtpEmailHtml, buildOtpEmailText } from './email.service.js';
 
 // The images live in the web app, which serves frontend/public/ at https://kalamio.com/.
 const PUBLIC_DIR = new URL('../../frontend/public/', import.meta.url);
@@ -50,6 +50,20 @@ describe('email.service', () => {
             expect(mail.html).toContain('Welcome to Kalamio! Use the code below to verify your email address.');
             expect(mail.html).toContain('>482917</span>');
             expect(mail.html).toContain('This code expires in 10 minutes. If you didn&#39;t create an account, ignore this email.');
+            expect(mail.text).toBe([
+                'Verify Your Email',
+                '',
+                'Welcome to Kalamio! Use the code below to verify your email address.',
+                '',
+                '482917',
+                '',
+                "This code expires in 10 minutes. If you didn't create an account, ignore this email.",
+                '',
+                '-- ',
+                'Kalamio · Write to the world.',
+                'https://kalamio.com',
+                '',
+            ].join('\n'));
         });
     });
 
@@ -66,6 +80,41 @@ describe('email.service', () => {
             expect(mail.html).toContain('You requested a password reset. Use the code below to set a new password.');
             expect(mail.html).toContain('>305618</span>');
             expect(mail.html).toContain('This code expires in 10 minutes. If you didn&#39;t request this, your account is safe — just ignore this email.');
+            expect(mail.text).toBe([
+                'Reset Your Password',
+                '',
+                'You requested a password reset. Use the code below to set a new password.',
+                '',
+                '305618',
+                '',
+                "This code expires in 10 minutes. If you didn't request this, your account is safe — just ignore this email.",
+                '',
+                '-- ',
+                'Kalamio · Write to the world.',
+                'https://kalamio.com',
+                '',
+            ].join('\n'));
+        });
+    });
+
+    describe('both emails', () => {
+        // nodemailer is mocked above. Its real stream transport builds the raw message without sending it.
+        it.each([
+            ['verification', sendVerificationEmail],
+            ['password reset', sendPasswordResetEmail],
+        ])('send the %s email as multipart/alternative: the text part, then the HTML part', async (_, send) => {
+            await send('reader@example.com', '482917');
+            const { default: realNodemailer } = await vi.importActual('nodemailer');
+            const { message } = await realNodemailer
+                .createTransport({ streamTransport: true, buffer: true })
+                .sendMail(lastMail());
+            const raw = message.toString();
+
+            expect(raw).toMatch(/^Content-Type: multipart\/alternative;/m);
+            const textAt = raw.indexOf('Content-Type: text/plain; charset=utf-8');
+            const htmlAt = raw.indexOf('Content-Type: text/html; charset=utf-8');
+            expect(textAt).toBeGreaterThan(-1);
+            expect(htmlAt).toBeGreaterThan(textAt);
         });
     });
 
@@ -148,6 +197,48 @@ describe('email.service', () => {
                 expect(scale).toBeGreaterThanOrEqual(2);
                 expect(png.readUInt32BE(20) / height).toBeCloseTo(scale, 1);
             }
+        });
+    });
+
+    describe('buildOtpEmailText', () => {
+        const text = buildOtpEmailText({
+            heading: 'Verify Your Email',
+            message: 'Use the code below.',
+            otp: '123456',
+            footer: 'This code expires in 10 minutes.',
+        });
+        const lines = text.split('\n');
+
+        it('puts the code alone on its own line, so it copies cleanly', () => {
+            expect(lines).toContain('123456');
+        });
+
+        it('puts the heading, message, code, small print and footer in that order', () => {
+            const order = ['Verify Your Email', 'Use the code below.', '123456', 'This code expires', 'Write to the world.']
+                .map((part) => text.indexOf(part));
+            expect(order.every((at) => at >= 0)).toBe(true);
+            expect(order).toEqual([...order].sort((a, b) => a - b));
+        });
+
+        it('ends with the footer after a "-- " signature line', () => {
+            expect(lines.slice(-4)).toEqual(['-- ', 'Kalamio · Write to the world.', 'https://kalamio.com', '']);
+        });
+
+        it('is plain text: no markup or HTML entities, and the text it is given is kept as is', () => {
+            expect(text).not.toMatch(/<[a-z/!]/i);
+            const plain = buildOtpEmailText({
+                heading: 'Tom & Jerry',
+                message: 'Use the code <below>.',
+                otp: '"123456"',
+                footer: "It's safe — ignore this email.",
+            });
+            expect(plain.split('\n')).toEqual(expect.arrayContaining([
+                'Tom & Jerry',
+                'Use the code <below>.',
+                '"123456"',
+                "It's safe — ignore this email.",
+            ]));
+            expect(plain).not.toMatch(/&(?:[a-z]+|#\d+|#x[\da-f]+);/i);
         });
     });
 });

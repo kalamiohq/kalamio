@@ -33,16 +33,18 @@ const fromAddress = () => `"Kalamio" <${process.env.EMAIL_FROM || process.env.EM
  * Sends an OTP email for email verification (signup flow).
  */
 export const sendVerificationEmail = async (email, otp) => {
+    const content = {
+        heading: 'Verify Your Email',
+        message: 'Welcome to Kalamio! Use the code below to verify your email address.',
+        otp,
+        footer: 'This code expires in 10 minutes. If you didn\'t create an account, ignore this email.',
+    };
     const mailOptions = {
         from: fromAddress(),
         to: email,
         subject: 'Verify Your Email — Kalamio',
-        html: buildOtpEmailHtml({
-            heading: 'Verify Your Email',
-            message: 'Welcome to Kalamio! Use the code below to verify your email address.',
-            otp,
-            footer: 'This code expires in 10 minutes. If you didn\'t create an account, ignore this email.',
-        }),
+        text: buildOtpEmailText(content),
+        html: buildOtpEmailHtml(content),
     };
 
     await getTransporter().sendMail(mailOptions);
@@ -52,16 +54,18 @@ export const sendVerificationEmail = async (email, otp) => {
  * Sends an OTP email for password reset flow.
  */
 export const sendPasswordResetEmail = async (email, otp) => {
+    const content = {
+        heading: 'Reset Your Password',
+        message: 'You requested a password reset. Use the code below to set a new password.',
+        otp,
+        footer: 'This code expires in 10 minutes. If you didn\'t request this, your account is safe — just ignore this email.',
+    };
     const mailOptions = {
         from: fromAddress(),
         to: email,
         subject: 'Reset Your Password — Kalamio',
-        html: buildOtpEmailHtml({
-            heading: 'Reset Your Password',
-            message: 'You requested a password reset. Use the code below to set a new password.',
-            otp,
-            footer: 'This code expires in 10 minutes. If you didn\'t request this, your account is safe — just ignore this email.',
-        }),
+        text: buildOtpEmailText(content),
+        html: buildOtpEmailHtml(content),
     };
 
     await getTransporter().sendMail(mailOptions);
@@ -172,4 +176,28 @@ export function buildOtpEmailHtml({ heading, message, otp, footer }) {
 </table>
 </body>
 </html>`;
+}
+
+/**
+ * Builds the plain-text part that goes with buildOtpEmailHtml, so the email is sent as
+ * multipart/alternative: text-only mail apps get a readable message, and spam filters score HTML-only
+ * mail worse. Same wording: the heading, the message, the code on a line of its own, the small print,
+ * then a short footer after a "-- " signature line. Each paragraph stays on one line for mail apps to
+ * wrap. Plain text, so nothing is escaped.
+ */
+export function buildOtpEmailText({ heading, message, otp, footer }) {
+    return [
+        heading,
+        '',
+        message,
+        '',
+        otp,
+        '',
+        footer,
+        '',
+        '-- ',
+        'Kalamio · Write to the world.',
+        SITE,
+        '',
+    ].join('\n');
 }
