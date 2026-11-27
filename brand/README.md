@@ -66,6 +66,15 @@ The favicon uses a heavier cut (DM Sans ExtraBold, optical size 14), fitted to t
 | `og-image` | Link preview (Open Graph / Twitter card) | 1200 × 630, `@2x` 2400 × 1260 |
 | `github-social-preview.png` | Social preview for the GitHub repository (Settings → Social preview) | 1280 × 640 |
 
+### Email images
+
+The emails the server sends (`server/services/email.service.js`) use small PNGs from `frontend/public/email/`, which the site serves at `https://kalamio.com/email/`. Render them again when the logo changes.
+
+| File | Rendered from | Size | Shown at |
+| --- | --- | --- | --- |
+| `kalamio-logo-on-dark.png` | `logo/kalamio-logo-on-dark.svg` on an Ink background, matching the email's header band | 256 × 50 | 128 × 25 |
+| `app-icon.png` | `icon/app-icon.svg` | 96 × 96 | 32 × 32 |
+
 ## Using the logo
 
 - **The dot is orange.** The full stop is always Kalamio Orange, in light and dark mode. The letters are ink on light backgrounds and paper on dark ones.
