@@ -38,7 +38,7 @@ Kalamio is a modern home for writing on the web. Writers get a distraction-free 
 puts their work in front of the right readers, and the tools to grow an audience: publications,
 followers, comments and analytics. Readers get a clean, fast reading experience in light or dark.
 
-Kalamio is in **public beta** at [kalamio.com](https://kalamio.com). The entire platform is open
+Kalamio is live at [kalamio.com](https://kalamio.com). The entire platform is open
 source under the [AGPL-3.0](LICENSE), and contributions are welcome.
 
 ## Features
