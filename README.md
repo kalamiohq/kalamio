@@ -23,6 +23,7 @@ Write long-form stories and quick thoughts, build a publication, and reach reade
   <a href="https://github.com/kalamiohq/kalamio/actions/workflows/ci.yml"><img src="https://github.com/kalamiohq/kalamio/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License: AGPL-3.0"></a>
   <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="Pull requests welcome"></a>
+  <a href="https://nsoc.in"><img src="https://img.shields.io/badge/NSoC%20%2726-Winter%20Edition-FD5002.svg" alt="NSoC '26 Winter Edition project"></a>
 </p>
 
 </div>
