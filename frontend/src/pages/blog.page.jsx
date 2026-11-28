@@ -340,9 +340,9 @@ const BlogPage = () => {
                 : blogQuery.isError ? <NetworkError onRetry={() => blogQuery.refetch()} />
                 :
                 <BlogContext.Provider value={{ blog, setBlog, isLikedByUser: false, setLikedByUser: () => {}, commentsWrapper, setCommentsWrapper, totalParentCommentsLoaded, setTotalParentCommentsLoaded }}>
-                    <div className={isTextPost ? "home-layout" : ""}>
-                        <div className={isTextPost ? "home-feed max-lg:pt-0 lg:pt-10" : ""}>
-                            <div className={`max-w-[900px] w-full center max-lg:px-[5vw] ${isTextPost ? 'max-lg:pt-0 max-lg:pb-6 lg:py-10' : 'max-lg:pt-0 max-lg:pb-10 lg:py-10'}`}>
+    <div className={isTextPost ? "home-layout" : ""}>
+        <div className={isTextPost ? "home-feed max-lg:pt-0 lg:pt-10" : ""}>
+            <div className={`max-w-[900px] w-full center max-lg:px-[5vw] ${isTextPost ? 'max-lg:pt-0 max-lg:pb-6 lg:pt-0' : ''}`}>
 
                         {isDraft && (
                             <div className="draft-preview-banner">
@@ -503,103 +503,109 @@ const BlogPage = () => {
                             </div>
                         )}
 
-                        {!isDraft && <CommentsContainer />}
-                    </div>
+                        <div className="max-w-[720px] mx-auto">
+                            {!isDraft && <CommentsContainer />}
+                        </div>
 
-                    {/* ── Footer Section (CTAs & Similar Blogs) ── */}
-                    {!isDraft && (
-                    <div className="border-t border-border py-10 mt-10 sm:mt-16">
-                        <div className="max-w-[900px] center max-lg:px-[5vw]">
-                            {/* ── CTA Section ── */}
-                            <div className="blog-cta-section !mt-0">
+                        {/* ── Footer Section (CTAs & Similar Blogs) ── */}
+                        {!isDraft && (
+                            <div className="border-t border-border py-10 mt-10 sm:mt-16">
+                                <div className="max-w-[900px] center max-lg:px-[5vw]">
 
-                            {/* Author CTA */}
-                            <div className="blog-cta-card">
-                                <div className="blog-cta-card__header">
-                                    <span className="blog-cta-card__label">Written by</span>
-                                </div>
-                                <div className="blog-cta-card__body">
-                                    <Link to={`/user/${author_username}`} className="blog-cta-card__avatar-link">
-                                        <Avatar src={profile_img} alt={fullname} size={56} />
-                                    </Link>
-                                    <div className="blog-cta-card__info">
-                                        <Link to={`/user/${author_username}`} className="blog-cta-card__name">{fullname}</Link>
-                                        <p className="blog-cta-card__username">@{author_username}</p>
-                                        {bio && <p className="blog-cta-card__bio">{bio}</p>}
-                                        <div className="blog-cta-card__stats">
-                                            <span><Icon name="article" className="text-sm" /> {author_total_posts || 0} posts</span>
-                                            <span><Icon name="visibility" className="text-sm" /> {(author_total_reads || 0).toLocaleString()} reads</span>
+                                    {/* CTA Section */}
+                                    <div className="max-w-[720px] mx-auto">
+                                        <div className="blog-cta-section !mt-0">
+
+                                            {/* Author CTA */}
+                                            <div className="blog-cta-card">
+                                                <div className="blog-cta-card__header">
+                                                    <span className="blog-cta-card__label">Written by</span>
+                                                </div>
+                                                <div className="blog-cta-card__body">
+                                                    <Link to={`/user/${author_username}`} className="blog-cta-card__avatar-link">
+                                                        <Avatar src={profile_img} alt={fullname} size={56} />
+                                                    </Link>
+                                                    <div className="blog-cta-card__info">
+                                                        <Link to={`/user/${author_username}`} className="blog-cta-card__name">{fullname}</Link>
+                                                        <p className="blog-cta-card__username">@{author_username}</p>
+                                                        {bio && <p className="blog-cta-card__bio">{bio}</p>}
+                                                        <div className="blog-cta-card__stats">
+                                                            <span><Icon name="article" className="text-sm" /> {author_total_posts || 0} posts</span>
+                                                            <span><Icon name="visibility" className="text-sm" /> {(author_total_reads || 0).toLocaleString()} reads</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="blog-cta-card__actions">
+                                                    <Link to={`/user/${author_username}`} className="blog-cta-card__btn">View Profile</Link>
+                                                    {blog.author?._id && <FollowButton targetUserId={blog.author._id} size="sm" />}
+                                                </div>
+                                            </div>
+
+                                            {/* Publication CTA */}
+                                            {publication && (
+                                                <div className="blog-cta-card blog-cta-card--pub">
+                                                    <div className="blog-cta-card__header">
+                                                        <span className="blog-cta-card__label">
+                                                            <Icon name="import_contacts" className="text-sm" /> Published in
+                                                        </span>
+                                                    </div>
+                                                    <div className="blog-cta-card__body">
+                                                        <div className="blog-cta-card__pub-icon-wrap">
+                                                            {publication.profile_photo ? (
+                                                                <img src={cdnUrl(publication.profile_photo)} alt={publication.title} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <Icon name="menu_book" className="blog-cta-card__pub-icon" />
+                                                            )}
+                                                        </div>
+                                                        <div className="blog-cta-card__info">
+                                                            <Link to={`/publication/${publication.slug}`} className="blog-cta-card__name">{publication.title}</Link>
+                                                            {publication.description && <p className="blog-cta-card__bio">{publication.description}</p>}
+                                                            <div className="blog-cta-card__stats">
+                                                                <span><Icon name="group" className="text-sm" /> {publication.total_subscribers || 0} subscribers</span>
+                                                                <span><Icon name="article" className="text-sm" /> {publication.total_posts || 0} posts</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="blog-cta-card__actions">
+                                                        <Link to={`/publication/${publication.slug}`} className="blog-cta-card__btn">View Publication</Link>
+                                                        <SubscribeButton publicationId={publication._id} size="sm" />
+                                                    </div>
+                                                </div>
+                                            )}
+
                                         </div>
                                     </div>
-                                </div>
-                                <div className="blog-cta-card__actions">
-                                    <Link to={`/user/${author_username}`} className="blog-cta-card__btn">View Profile</Link>
-                                    {blog.author?._id && <FollowButton targetUserId={blog.author._id} size="sm" />}
+
+                                    {/* Similar Blogs (outside the 720px wrapper) */}
+                                    {
+                                        similarBlogs != null && similarBlogs.length ?
+                                            <>
+                                                <h1 className="text-2xl mt-14 mb-10 font-semibold flex items-center gap-2">
+                                                    Similar Blogs
+                                                </h1>
+
+                                                {
+                                                    similarBlogs.map((blog, i) => {
+                                                        let { author: { personal_info } } = blog;
+
+                                                        return <AnimationWrapper key={i} transition={{duration: 0.4, delay: i*0.05}}>
+                                                            <BlogPostCard content={blog} author={personal_info} />
+                                                        </AnimationWrapper>
+                                                    })
+                                                }
+                                            </>
+                                        : ""
+                                    }
                                 </div>
                             </div>
+                        )}
 
-                            {/* Publication CTA */}
-                            {publication && (
-                                <div className="blog-cta-card blog-cta-card--pub">
-                                    <div className="blog-cta-card__header">
-                                        <span className="blog-cta-card__label">
-                                            <Icon name="import_contacts" className="text-sm" /> Published in
-                                        </span>
-                                    </div>
-                                    <div className="blog-cta-card__body">
-                                        <div className="blog-cta-card__pub-icon-wrap">
-                                            {publication.profile_photo ? (
-                                                <img src={cdnUrl(publication.profile_photo)} alt={publication.title} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <Icon name="menu_book" className="blog-cta-card__pub-icon" />
-                                            )}
-                                        </div>
-                                        <div className="blog-cta-card__info">
-                                            <Link to={`/publication/${publication.slug}`} className="blog-cta-card__name">{publication.title}</Link>
-                                            {publication.description && <p className="blog-cta-card__bio">{publication.description}</p>}
-                                            <div className="blog-cta-card__stats">
-                                                <span><Icon name="group" className="text-sm" /> {publication.total_subscribers || 0} subscribers</span>
-                                                <span><Icon name="article" className="text-sm" /> {publication.total_posts || 0} posts</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="blog-cta-card__actions">
-                                        <Link to={`/publication/${publication.slug}`} className="blog-cta-card__btn">View Publication</Link>
-                                        <SubscribeButton publicationId={publication._id} size="sm" />
-                                    </div>
-                                </div>
-                            )}
+            </div>
+        </div>
 
-                        </div>
-
-                        {
-                            similarBlogs != null && similarBlogs.length ?
-                                <>
-                                    <h1 className="text-2xl mt-14 mb-10 font-semibold flex items-center gap-2">
-                                        Similar Blogs
-                                    </h1>
-
-                                    {
-                                        similarBlogs.map((blog, i) => {
-
-                                            let { author: { personal_info } } = blog;
-
-                                            return <AnimationWrapper key={i} transition={{duration: 0.4, delay: i*0.05}}>
-                                                <BlogPostCard content={blog} author={personal_info} />
-                                            </AnimationWrapper>
-
-                                        })
-                                    }
-                                </>
-                            : ""
-                        }
-                        </div>
-                    </div>
-                    )}
-                        </div>
-                        {isTextPost && <RightSidebar />}
-                    </div>
-                </BlogContext.Provider>
+        {isTextPost && <RightSidebar />}
+    </div>
+</BlogContext.Provider>
             }
         </AnimationWrapper>
     )
