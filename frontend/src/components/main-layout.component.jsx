@@ -178,6 +178,19 @@ const MainLayout = () => {
 
     return (
         <div className={"app-layout" + (focusedReading ? " app-layout--reading" : "")}>
+            <a
+                href="#main-content"
+                className="skip-to-content"
+                onClick={(event) => {
+                    const main = document.getElementById("main-content");
+                    if (!main) return;
+                    event.preventDefault();
+                    main.focus();
+                }}
+            >
+                Skip to content
+            </a>
+
             {/* Desktop left sidebar — hidden on mobile, and removed on the focused article read
                 (the article's inline back button handles navigation there). */}
             {!focusedReading && <LeftSidebar />}
@@ -186,7 +199,7 @@ const MainLayout = () => {
             {location.pathname !== "/reads" && !focusedReading && <MobileTopBar />}
 
             {/* Main content area */}
-            <main className="app-layout__main">
+            <main id="main-content" className="app-layout__main focus:outline-none" tabIndex={-1}>
 
                 {/* Page content */}
                 <div className={"app-layout__content" + (isDashboardOrSettings && location.pathname !== "/settings/profile" ? " app-layout__content--dashboard" : "")}>
