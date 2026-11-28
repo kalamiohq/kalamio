@@ -15,6 +15,15 @@ const HEADER_OFFSET = 80;
 const ACTIVE_SECTION_SLACK = 1;
 // How long scrolling has to stop before a smooth scroll to a clicked section counts as finished.
 const SCROLL_SETTLE_MS = 150;
+// Scroll movements smaller than this don't hide or show the Contents button, so jitter and
+// trackpad noise can't make it flicker.
+const CONTENTS_BUTTON_SCROLL_THRESHOLD = 8;
+// Within this distance of the top of the page the Contents button is always shown.
+const CONTENTS_BUTTON_TOP_ZONE = 80;
+// Slides the button down past the bottom edge. The button sits 84px above the screen bottom to
+// clear the tab bar, so the offset has to cover that gap plus the button's own height.
+const CONTENTS_BUTTON_HIDDEN_CLASS =
+    "translate-y-[calc(100%+84px+env(safe-area-inset-bottom))]";
 
 const sectionTickClass = (isActive) =>
     `h-[2px] flex-none rounded-full transition-[width,background-color] duration-200 ease-out motion-reduce:transition-none ${
@@ -149,7 +158,30 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
         // asynchronously rendered sections) and viewport resizes.
         update();
 
+        let lastScrollY = window.scrollY || 0;
+
+        // Hide the Contents button while scrolling down, show it while scrolling up. Toggles
+        // classes on the element directly so scrolling doesn't cause React renders.
+        const updateContentsButton = () => {
+            const button = contentsButtonRef.current;
+            if (!button) return;
+
+            const currentY = window.scrollY || 0;
+            if (currentY <= CONTENTS_BUTTON_TOP_ZONE) {
+                lastScrollY = currentY;
+                button.classList.remove(CONTENTS_BUTTON_HIDDEN_CLASS);
+                return;
+            }
+
+            const delta = currentY - lastScrollY;
+            if (Math.abs(delta) < CONTENTS_BUTTON_SCROLL_THRESHOLD) return;
+
+            lastScrollY = currentY;
+            button.classList.toggle(CONTENTS_BUTTON_HIDDEN_CLASS, delta > 0);
+        };
+
         const onScroll = () => {
+            updateContentsButton();
             if (holdSectionRef.current) {
                 clearTimeout(settleTimerRef.current);
                 settleTimerRef.current = setTimeout(() => {
@@ -320,7 +352,7 @@ const ReadingProgress = ({ targetRef, contentRef, resetKey, content }) => {
                     onClick={() => setSheetOpen(true)}
                     aria-haspopup="dialog"
                     aria-expanded={sheetOpen}
-                    className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] right-[16px] z-50 flex items-center gap-[8px] rounded-full border border-border bg-white px-[16px] py-[10px] font-inter text-[14px] font-semibold text-black shadow-[0_6px_20px_rgba(0,0,0,0.12)] transition-colors hover:bg-grey active:scale-95 lg:hidden"
+                    className="fixed bottom-[calc(84px+env(safe-area-inset-bottom))] right-[16px] z-50 flex items-center gap-[8px] rounded-full border border-border bg-white px-[16px] py-[10px] font-inter text-[14px] font-semibold text-black shadow-[0_6px_20px_rgba(0,0,0,0.12)] transition-[color,background-color,transform] duration-200 ease-out hover:bg-grey active:scale-95 focus-visible:translate-y-0 motion-reduce:transition-none lg:hidden"
                 >
                     <Icon name="format_list_bulleted" className="text-[16px]" />
                     Contents

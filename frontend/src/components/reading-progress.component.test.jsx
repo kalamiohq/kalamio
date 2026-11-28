@@ -511,4 +511,102 @@ describe("ReadingProgress", () => {
         fireEvent.keyDown(document, { key: "Escape" });
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+
+    describe("Contents button visibility on scroll", () => {
+        const HIDDEN = "translate-y-[calc(100%+84px+env(safe-area-inset-bottom))]";
+
+        const scrollTo = (y) => {
+            Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: y });
+            fireEvent.scroll(window);
+            flushRaf();
+        };
+        const contentsButton = () => screen.getByRole("button", { name: /contents/i });
+
+        beforeEach(() => {
+            Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+        });
+
+        afterEach(() => {
+            Object.defineProperty(window, "scrollY", { configurable: true, writable: true, value: 0 });
+        });
+
+        it("hides the button when scrolling down and shows it when scrolling up", () => {
+            render(<SectionHarness />);
+            const button = contentsButton();
+            expect(button).not.toHaveClass(HIDDEN);
+
+            scrollTo(400);
+            expect(button).toHaveClass(HIDDEN);
+
+            scrollTo(300);
+            expect(button).not.toHaveClass(HIDDEN);
+        });
+
+        it("ignores small scroll movements so the button doesn't flicker", () => {
+            render(<SectionHarness />);
+            const button = contentsButton();
+
+            scrollTo(400);
+            expect(button).toHaveClass(HIDDEN);
+
+            scrollTo(397); // a 3px nudge up is below the threshold
+            expect(button).toHaveClass(HIDDEN);
+
+            scrollTo(380);
+            expect(button).not.toHaveClass(HIDDEN);
+
+            scrollTo(383); // a 3px nudge down
+            expect(button).not.toHaveClass(HIDDEN);
+        });
+
+        it("always shows the button near the top of the page", () => {
+            render(<SectionHarness />);
+            const button = contentsButton();
+
+            scrollTo(600);
+            expect(button).toHaveClass(HIDDEN);
+
+            scrollTo(40);
+            expect(button).not.toHaveClass(HIDDEN);
+
+            // Scrolling down while still in the top zone doesn't hide it.
+            scrollTo(70);
+            expect(button).not.toHaveClass(HIDDEN);
+        });
+
+        it("toggles classes on the element without re-rendering it", () => {
+            render(<SectionHarness />);
+            const button = contentsButton();
+
+            scrollTo(500);
+
+            // Same DOM node, still labelled and not expanded: only classes changed.
+            expect(contentsButton()).toBe(button);
+            expect(button).toHaveAttribute("aria-expanded", "false");
+        });
+
+        it("clears the bottom tab bar when hidden and keeps focus and motion styles", () => {
+            render(<SectionHarness />);
+            const button = contentsButton();
+
+            expect(button).toHaveClass("focus-visible:translate-y-0");
+            expect(button).toHaveClass("motion-reduce:transition-none");
+            // Offset covers the 84px gap above the tab bar, the safe area and the button's height.
+            expect(HIDDEN).toContain("100%");
+            expect(HIDDEN).toContain("84px");
+            expect(HIDDEN).toContain("env(safe-area-inset-bottom)");
+        });
+
+        it("reuses the passive scroll listener instead of adding a second one", () => {
+            const addSpy = vi.spyOn(window, "addEventListener");
+            const removeSpy = vi.spyOn(window, "removeEventListener");
+            render(<SectionHarness />);
+
+            const added = addSpy.mock.calls.filter(([type]) => type === "scroll");
+            const removed = removeSpy.mock.calls.filter(([type]) => type === "scroll");
+            // The effect re-subscribes when sections are found, but only one listener stays live.
+            expect(added.length - removed.length).toBe(1);
+            added.forEach(([, , options]) => expect(options).toEqual({ passive: true }));
+        });
+    });
 });
