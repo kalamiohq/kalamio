@@ -178,7 +178,18 @@ const MainLayout = () => {
 
     return (
         <div className={"app-layout" + (focusedReading ? " app-layout--reading" : "")}>
-            <a href="#main-content" className="skip-to-content">Skip to content</a>
+            <a
+                href="#main-content"
+                className="skip-to-content"
+                onClick={(event) => {
+                    const main = document.getElementById("main-content");
+                    if (!main) return;
+                    event.preventDefault();
+                    main.focus();
+                }}
+            >
+                Skip to content
+            </a>
 
             {/* Desktop left sidebar — hidden on mobile, and removed on the focused article read
                 (the article's inline back button handles navigation there). */}
